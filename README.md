@@ -13,7 +13,7 @@ Os objetivos estratégicos do projeto 'Família & Escola' delineiam uma abordage
   4. Acabar com a Burocracia e a Demora: Centralizar a gestão para otimizar o acompanhamento do aluno, manter os responsáveis cientes das normativas e processos, e permitir que a escola monitore casos que necessitem de atenção especial.
 
 ## :round_pushpin: Documentação
-[Documentação]([https://github.com/RWilker87](https://docs.google.com/document/d/1T4hJV0T8A_vH_6RynDLP9Udx9Zb_fH7yHMETLeTu_tI/edit?tab=t.0#heading=h.bzu6mdlvylhd)) 
+[Documentação](https://docs.google.com/document/d/1T4hJV0T8A_vH_6RynDLP9Udx9Zb_fH7yHMETLeTu_tI/edit?tab=t.0#heading=h.bzu6mdlvylhd)
 
 ## :hammer_and_wrench: Tecnologias Usadas
 ### [Flutter](https://flutter.dev/)
