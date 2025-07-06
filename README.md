@@ -12,12 +12,13 @@ Os objetivos estratégicos do projeto 'Família & Escola' delineiam uma abordage
   3. Deixar Todos Informados e Seguros: Garantir tipos de acesso diferenciados para pais/responsáveis e para a equipe escolar, assegurando que as informações sejam claras e direcionadas aos destinatários corretos.
   4. Acabar com a Burocracia e a Demora: Centralizar a gestão para otimizar o acompanhamento do aluno, manter os responsáveis cientes das normativas e processos, e permitir que a escola monitore casos que necessitem de atenção especial.
 
+## :round_pushpin: Documentação
+[Documentação]([https://github.com/RWilker87](https://docs.google.com/document/d/1T4hJV0T8A_vH_6RynDLP9Udx9Zb_fH7yHMETLeTu_tI/edit?tab=t.0#heading=h.bzu6mdlvylhd)) 
 
 ## :hammer_and_wrench: Tecnologias Usadas
 ### [Flutter](https://flutter.dev/)
 *   Versão 3.32.5
-### [Codacy](https://www.codacy.com/product)
-### [Heroku](https://www.heroku.com/)
+
 ## :construction: Status do Projeto
 Em andamento
 ## :keyboard: Acessando o sistema
