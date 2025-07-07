@@ -1,4 +1,4 @@
-# Sistema Família e Escola
+# Sistema Família & Escola
 ## :octocat: Integrantes
 [José Daniel](https://github.com/JoseDanielF) | [Rian Wilker](https://github.com/RWilker87) 
 ## :page_with_curl: Sobre o Projeto
