@@ -15,7 +15,7 @@ Os objetivos estratégicos do projeto 'Família & Escola' delineiam uma abordage
 ## :round_pushpin: Documentação
 ### [Plano de Projeto](https://docs.google.com/document/d/1T4hJV0T8A_vH_6RynDLP9Udx9Zb_fH7yHMETLeTu_tI/edit?tab=t.0#heading=h.bzu6mdlvylhd)
 ### [Histórias de Usuário](https://docs.google.com/document/d/1DZpZ8fS0tS7J_54NT5KN65dknsAnjkOLSBQoFSkXoxU/edit?usp=sharing)
-### [Projects](https://github.com/orgs/Dev-Sphere-Enterprise/projects/2/views/1)
+### [Backlog](https://github.com/orgs/Dev-Sphere-Enterprise/projects/2/views/1)
 ### [Figma](https://www.figma.com/design/dSgpU4drU4xwQTPVESidgh/Escola---Fam%C3%ADlia?node-id=0-1&t=z0b4W3Tvh3KWVLbm-1)
 ### [MER](https://docs.google.com/document/d/1cFy4Q8tohVVRHTsRO8QiCzIY1uo9GW-Y1qpXMsl-Fzc/edit?usp=sharing)
 
