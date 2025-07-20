@@ -1,38 +1,27 @@
-# FinBuddy - Gerenciador Financeiro para Pessoaa Física
+# Sistema Família & Escola
 ## :octocat: Integrantes
-[José Daniel](https://github.com/JoseDanielF) | [David L. Flayban](https://github.com/Flayban) 
+[Rian Wilker](https://github.com/RWilker87) 
 ## :page_with_curl: Sobre o Projeto
-Projeto para a disciplina de __Desenvolvimento de Aplicações Móveis__ ministrado pela Professora Dra. [Thais Burity](https://github.com/taburity) da UFAPE, referente ao período de 2025.1 com intuito de avaliação para a 1ª e 2ª Verificação de Aprendizagem.
+Projeto para implementação de um SaaS em Flutter com foco para a disciplina de __Desenvolvimento de Aplicações Móveis__ ministrado pela Professora Dra. [Thais Burity](https://github.com/taburity), da UFAPE, referente ao período de 2025.1 com intuito de avaliação para a 2ª Verificação de Aprendizagem.
+O projeto se dá por um sistema para um escola. Sistema que vai servir de apoio entre famílias e as escolas.
 
-## :round_pushpin: Motivação
-O projeto FinBuddy surge da necessidade de uma ferramenta gratuita, manual e acessível para que os indivíduos possam controlar melhor suas finanças pessoais. Segundo levantamento da CNC, mais de 77% das famílias brasileiras estão endividadas, e muitas ferramentas digitais atuais são voltadas para empresas ou exigem pagamentos para funções essenciais como integração bancária.
-A ausência de uma ferramenta acessível e completa pode resultar em dificuldades para o controle de gastos, planejamento financeiro e alcance de metas de economia, impactando negativamente o bem-estar financeiro dos usuários.
-O projeto se propõe a oferecer uma alternativa segura e privativa, sem necessidade de sincronização com contas bancárias, promovendo educação financeira e autonomia.
-
-## :round_pushpin: Objetivo Geral 
-O objetivo principal do projeto FinBuddy é "Democratizar o acesso a um gerenciador financeiro eficiente, intuitivo e gratuito, promovendo a educação e o controle financeiro pessoal.".
-
-## :round_pushpin: Objetivos Específicos
-  1. Identificar padrões de consumo;
-  2. Alcançar metas de economia;
-  3. Apoiar decisões financeiras mais conscientes;
-  4. Evitar endividamentos;
-  5. Planejar o futuro financeiro de forma eficaz e autônoma;
-  6. Oferecer recursos visuais e notificativos para controle. Como calendários interativos, gráficos de desempenho (incluindo o monitoramento do teto de gastos) e notificações proativas.
+## :round_pushpin: Objetivos
+Os objetivos estratégicos do projeto 'Família & Escola' delineiam uma abordagem multifacetada para endereçar os desafios identificados. O objetivo principal é desenvolver uma aplicação que disponibiliza informações essenciais e facilita a comunicação entre a direção da escola e as famílias. No âmbito do sistema, a meta é que o programa seja feito para a escola e a família estarem cada vez mais próximos, garantindo que os pais tenham acesso às informações mais importantes sobre o crescimento e o dia a dia da criança. Estes propósitos centrais são desdobrados em objetivos específicos que visam:
+  1. Reter os Responsáveis dos Estudantes: Utilizar um banco de dados para localizar rapidamente os responsáveis, facilitando o contato e minimizando erros humanos.
+  2. Passar Informações Facilmente: Oferecer um canal unificado de diálogo onde a equipe escolar possa comunicar-se e os pais possam visualizar as mensagens de forma ágil através de dispositivos móveis.
+  3. Deixar Todos Informados e Seguros: Garantir tipos de acesso diferenciados para pais/responsáveis e para a equipe escolar, assegurando que as informações sejam claras e direcionadas aos destinatários corretos.
+  4. Acabar com a Burocracia e a Demora: Centralizar a gestão para otimizar o acompanhamento do aluno, manter os responsáveis cientes das normativas e processos, e permitir que a escola monitore casos que necessitem de atenção especial.
 
 ## :round_pushpin: Documentação
-### [Documentação](https://drive.google.com/drive/folders/1BDYb_pvn6g7q761QtnoIvFlAilXBlSeC?usp=drive_link)
-### [Backlog](https://github.com/orgs/Dev-Sphere-Enterprise/projects/1/views/1)
-### [MER]()
-### [Protótipo Fin_Buddy](https://www.figma.com/proto/rigBzs5uKKdDOERVPQ0gUl/Prot%C3%B3tipo-Mobile?node-id=1-5&p=f&t=6rjFtckSInneH0F9-1&scaling=scale-down&content-scaling=fixed&page-id=0%3A1&starting-point-node-id=15%3A2017)
-### [APK](google.com.br)
+### [Plano de Projeto](https://docs.google.com/document/d/1T4hJV0T8A_vH_6RynDLP9Udx9Zb_fH7yHMETLeTu_tI/edit?tab=t.0#heading=h.bzu6mdlvylhd)
+### [Histórias de Usuário](https://docs.google.com/document/d/1DZpZ8fS0tS7J_54NT5KN65dknsAnjkOLSBQoFSkXoxU/edit?usp=sharing)
+### [Backlog](https://github.com/orgs/Dev-Sphere-Enterprise/projects/2/views/1)
+### [MER](https://docs.google.com/document/d/1cFy4Q8tohVVRHTsRO8QiCzIY1uo9GW-Y1qpXMsl-Fzc/edit?usp=sharing)
+### Figma -> [Gestor](https://www.figma.com/design/x1fDIfxtgW01CpjL5HsEwo/Escola---Fam%C3%ADlia--Gestor-?t=JPZuzNfPusSOwhk8-1) | [Responsável](https://www.figma.com/design/Lb9NmKY5q4GFDBcFa70DjT/Escola---Fam%C3%ADlia--Respons%C3%A1vel-?t=JPZuzNfPusSOwhk8-1)
 
 ## :hammer_and_wrench: Tecnologias Usadas
-### [Android Studio](https://developer.android.com/studio?hl=pt-br)
-*   Versão 2024.3.2.15
 ### [Flutter](https://flutter.dev/)
 *   Versão 3.32.5
-
 
 ## :construction: Status do Projeto
 Em andamento
