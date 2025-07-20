@@ -1,4 +1,4 @@
-package com.example.thunderapp
+package com.example.finbuddy
 
 import io.flutter.embedding.android.FlutterActivity
 

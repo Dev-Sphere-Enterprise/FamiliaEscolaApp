@@ -68,7 +68,7 @@ class DefaultFirebaseOptions {
     projectId: 'daletrasufape',
     storageBucket: 'daletrasufape.appspot.com',
     iosClientId: '543019960746-g4nrj8c9aeai3o4i65bmv87v71826dgp.apps.googleusercontent.com',
-    iosBundleId: 'com.example.thunderapp',
+    iosBundleId: 'com.example.finbuddy',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
@@ -78,6 +78,6 @@ class DefaultFirebaseOptions {
     projectId: 'daletrasufape',
     storageBucket: 'daletrasufape.appspot.com',
     iosClientId: '543019960746-g4nrj8c9aeai3o4i65bmv87v71826dgp.apps.googleusercontent.com',
-    iosBundleId: 'com.example.thunderapp',
+    iosBundleId: 'com.example.finbuddy',
   );
 }

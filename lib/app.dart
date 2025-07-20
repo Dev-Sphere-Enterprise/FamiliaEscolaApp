@@ -3,11 +3,11 @@ import 'package:device_preview/device_preview.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:responsive_framework/responsive_wrapper.dart';
-import 'package:thunderapp/screens/carrousel/carrousel_screen.dart';
-import 'package:thunderapp/screens/screens_index.dart';
-import 'package:thunderapp/screens/sign%20up/sign_up_screen.dart';
-import 'package:thunderapp/shared/constants/app_theme.dart';
-import 'package:thunderapp/shared/core/navigator.dart';
+import 'package:finbuddy/screens/carrousel/carrousel_screen.dart';
+import 'package:finbuddy/screens/screens_index.dart';
+import 'package:finbuddy/screens/sign%20up/sign_up_screen.dart';
+import 'package:finbuddy/shared/constants/app_theme.dart';
+import 'package:finbuddy/shared/core/navigator.dart';
 
 import 'screens/home/home_screen.dart';
 import 'screens/signin/sign_in_screen.dart';

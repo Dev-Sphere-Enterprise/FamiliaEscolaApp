@@ -1,8 +1,8 @@
 import 'dart:developer';
 
 import 'package:flutter/cupertino.dart';
-import 'package:thunderapp/shared/core/db/firestore_db_manager.dart';
-import 'package:thunderapp/shared/core/models/user.dart';
+import 'package:finbuddy/shared/core/db/firestore_db_manager.dart';
+import 'package:finbuddy/shared/core/models/user.dart';
 
 class UserManager with ChangeNotifier {
   final FirestoreDatabaseManager _db = FirestoreDatabaseManager();

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:thunderapp/screens/home/home_screen_controller.dart';
-import 'package:thunderapp/screens/screens_index.dart';
-import 'package:thunderapp/shared/core/models/recipe_model.dart';
-import 'package:thunderapp/shared/core/navigator.dart';
+import 'package:finbuddy/screens/home/home_screen_controller.dart';
+import 'package:finbuddy/screens/screens_index.dart';
+import 'package:finbuddy/shared/core/models/recipe_model.dart';
+import 'package:finbuddy/shared/core/navigator.dart';
 
 import '../../../../components/utils/vertical_spacer_box.dart';
 import '../../../../shared/constants/app_enums.dart';

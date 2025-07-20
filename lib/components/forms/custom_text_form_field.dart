@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:thunderapp/shared/constants/app_number_constants.dart';
-import 'package:thunderapp/shared/constants/style_constants.dart';
+import 'package:finbuddy/shared/constants/app_number_constants.dart';
+import 'package:finbuddy/shared/constants/style_constants.dart';
 
 class CustomTextFormField extends StatefulWidget {
   const CustomTextFormField({Key? key, this.label, this.controller, this.keyboardType, this.hintText, this.isPassword}) : super(key: key);

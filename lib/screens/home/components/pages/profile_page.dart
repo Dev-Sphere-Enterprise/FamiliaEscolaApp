@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
-import 'package:thunderapp/components/buttons/custom_text_button.dart';
-import 'package:thunderapp/screens/home/home_screen_controller.dart';
-import 'package:thunderapp/shared/components/dialogs/default_alert_dialog.dart';
-import 'package:thunderapp/shared/constants/app_theme.dart';
-import 'package:thunderapp/shared/core/db/firestore_db_manager.dart';
+import 'package:finbuddy/components/buttons/custom_text_button.dart';
+import 'package:finbuddy/screens/home/home_screen_controller.dart';
+import 'package:finbuddy/shared/components/dialogs/default_alert_dialog.dart';
+import 'package:finbuddy/shared/constants/app_theme.dart';
+import 'package:finbuddy/shared/core/db/firestore_db_manager.dart';
 
 import '../../../../components/buttons/primary_button.dart';
 import '../../../../components/utils/vertical_spacer_box.dart';

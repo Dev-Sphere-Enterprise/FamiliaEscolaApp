@@ -3,11 +3,11 @@ import 'dart:developer';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:thunderapp/screens/screens_index.dart';
+import 'package:finbuddy/screens/screens_index.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:thunderapp/shared/constants/app_enums.dart';
-import 'package:thunderapp/shared/core/navigator.dart';
-import 'package:thunderapp/shared/core/toast/app_notification_manager.dart';
+import 'package:finbuddy/shared/constants/app_enums.dart';
+import 'package:finbuddy/shared/core/navigator.dart';
+import 'package:finbuddy/shared/core/toast/app_notification_manager.dart';
 import 'sign_in_repository.dart';
 
 enum SignInStatus {

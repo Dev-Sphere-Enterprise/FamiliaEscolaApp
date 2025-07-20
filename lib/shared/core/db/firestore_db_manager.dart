@@ -2,11 +2,11 @@ import 'dart:developer';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:thunderapp/shared/constants/app_enums.dart';
-import 'package:thunderapp/shared/core/features/notifications/notifications_manager.dart';
-import 'package:thunderapp/shared/core/models/recipe_model.dart';
-import 'package:thunderapp/shared/core/models/user.dart';
-import 'package:thunderapp/shared/core/toast/app_notification_manager.dart';
+import 'package:finbuddy/shared/constants/app_enums.dart';
+import 'package:finbuddy/shared/core/features/notifications/notifications_manager.dart';
+import 'package:finbuddy/shared/core/models/recipe_model.dart';
+import 'package:finbuddy/shared/core/models/user.dart';
+import 'package:finbuddy/shared/core/toast/app_notification_manager.dart';
 
 import '../utils/utils.dart';
 

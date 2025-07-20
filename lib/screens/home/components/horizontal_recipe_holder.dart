@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:thunderapp/screens/home/components/recipe_card.dart';
-import 'package:thunderapp/screens/home/home_screen_controller.dart';
+import 'package:finbuddy/screens/home/components/recipe_card.dart';
+import 'package:finbuddy/screens/home/home_screen_controller.dart';
 
 import '../../../components/utils/horizontal_spacer_box.dart';
 import '../../../components/utils/vertical_spacer_box.dart';

@@ -1,6 +1,6 @@
 import 'package:flutter/cupertino.dart';
-import 'package:thunderapp/screens/screens_index.dart';
-import 'package:thunderapp/shared/core/navigator.dart';
+import 'package:finbuddy/screens/screens_index.dart';
+import 'package:finbuddy/shared/core/navigator.dart';
 
 class CarrouselScreenController with ChangeNotifier {
   final PageController _pageController =

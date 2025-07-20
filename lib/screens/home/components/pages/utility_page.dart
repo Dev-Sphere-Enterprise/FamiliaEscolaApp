@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:thunderapp/shared/components/index.dart';
-import 'package:thunderapp/shared/constants/app_number_constants.dart';
+import 'package:finbuddy/shared/components/index.dart';
+import 'package:finbuddy/shared/constants/app_number_constants.dart';
 
 import '../../../../components/buttons/primary_button.dart';
 import '../../../../components/utils/vertical_spacer_box.dart';

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:provider/provider.dart';
-import 'package:thunderapp/screens/home/components/pages/profile_page.dart';
-import 'package:thunderapp/screens/home/home_screen_controller.dart';
-import 'package:thunderapp/shared/constants/app_number_constants.dart';
-import 'package:thunderapp/shared/core/user_manager.dart';
+import 'package:finbuddy/screens/home/components/pages/profile_page.dart';
+import 'package:finbuddy/screens/home/home_screen_controller.dart';
+import 'package:finbuddy/shared/constants/app_number_constants.dart';
+import 'package:finbuddy/shared/core/user_manager.dart';
 
 import '../../shared/constants/style_constants.dart';
 import 'components/pages/favorite_page.dart';

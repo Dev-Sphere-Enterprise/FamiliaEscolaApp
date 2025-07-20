@@ -1,7 +1,7 @@
 import 'package:bot_toast/bot_toast.dart';
 import 'package:flutter/material.dart';
-import 'package:thunderapp/shared/constants/app_enums.dart';
-import 'package:thunderapp/shared/constants/style_constants.dart';
+import 'package:finbuddy/shared/constants/app_enums.dart';
+import 'package:finbuddy/shared/constants/style_constants.dart';
 
 class AppSnackbarManager {
   static void showSimpleNotification(NotificationType type, [String? title]) {

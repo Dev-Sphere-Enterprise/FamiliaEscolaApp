@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
-import 'package:thunderapp/screens/home/home_screen_controller.dart';
+import 'package:finbuddy/screens/home/home_screen_controller.dart';
 
 import '../../../../components/buttons/primary_button.dart';
 import '../../../../components/utils/vertical_spacer_box.dart';

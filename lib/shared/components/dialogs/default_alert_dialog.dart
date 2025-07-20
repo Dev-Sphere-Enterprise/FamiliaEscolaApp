@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:thunderapp/components/buttons/custom_text_button.dart';
-import 'package:thunderapp/components/buttons/primary_button.dart';
-import 'package:thunderapp/shared/constants/style_constants.dart';
-import 'package:thunderapp/shared/core/navigator.dart';
+import 'package:finbuddy/components/buttons/custom_text_button.dart';
+import 'package:finbuddy/components/buttons/primary_button.dart';
+import 'package:finbuddy/shared/constants/style_constants.dart';
+import 'package:finbuddy/shared/core/navigator.dart';
 
 class DefaultAlertDialog extends StatelessWidget {
   const DefaultAlertDialog({Key? key, required this.title, required this.body, required this.cancelText, required this.onConfirm, required this.confirmText}) : super(key: key);

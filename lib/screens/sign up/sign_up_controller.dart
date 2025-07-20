@@ -2,9 +2,9 @@ import 'dart:developer';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:thunderapp/shared/constants/app_enums.dart';
-import 'package:thunderapp/shared/core/db/firestore_db_manager.dart';
-import 'package:thunderapp/shared/core/toast/app_notification_manager.dart';
+import 'package:finbuddy/shared/constants/app_enums.dart';
+import 'package:finbuddy/shared/core/db/firestore_db_manager.dart';
+import 'package:finbuddy/shared/core/toast/app_notification_manager.dart';
 
 class SignUpScreenController with ChangeNotifier {
   var screenState = ScreenState.idle;

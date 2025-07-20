@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
-import 'package:thunderapp/components/buttons/custom_text_button.dart';
-import 'package:thunderapp/components/buttons/primary_button.dart';
-import 'package:thunderapp/components/utils/vertical_spacer_box.dart';
-import 'package:thunderapp/screens/carrousel/carrousel_controller.dart';
-import 'package:thunderapp/shared/constants/app_enums.dart';
-import 'package:thunderapp/shared/constants/app_number_constants.dart';
-import 'package:thunderapp/shared/constants/style_constants.dart';
-import 'package:thunderapp/shared/core/assets_index.dart';
+import 'package:finbuddy/components/buttons/custom_text_button.dart';
+import 'package:finbuddy/components/buttons/primary_button.dart';
+import 'package:finbuddy/components/utils/vertical_spacer_box.dart';
+import 'package:finbuddy/screens/carrousel/carrousel_controller.dart';
+import 'package:finbuddy/shared/constants/app_enums.dart';
+import 'package:finbuddy/shared/constants/app_number_constants.dart';
+import 'package:finbuddy/shared/constants/style_constants.dart';
+import 'package:finbuddy/shared/core/assets_index.dart';
 
 class CarrouselScreen extends StatelessWidget {
   const CarrouselScreen({Key? key}) : super(key: key);

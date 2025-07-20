@@ -6,11 +6,11 @@ import 'package:flutter/services.dart';
 import 'package:get_it/get_it.dart';
 import 'package:logging/logging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:thunderapp/screens/screens_index.dart';
-import 'package:thunderapp/shared/core/navigator.dart';
-import 'package:thunderapp/shared/core/preferences_manager.dart';
-import 'package:thunderapp/shared/core/user_manager.dart';
-import 'package:thunderapp/shared/core/user_storage.dart';
+import 'package:finbuddy/screens/screens_index.dart';
+import 'package:finbuddy/shared/core/navigator.dart';
+import 'package:finbuddy/shared/core/preferences_manager.dart';
+import 'package:finbuddy/shared/core/user_manager.dart';
+import 'package:finbuddy/shared/core/user_storage.dart';
 
 class SplashScreenController {
   final BuildContext context;

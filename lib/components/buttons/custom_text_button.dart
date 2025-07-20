@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:thunderapp/shared/constants/style_constants.dart';
+import 'package:finbuddy/shared/constants/style_constants.dart';
 
 class CustomTextButton extends StatelessWidget {
   const CustomTextButton(

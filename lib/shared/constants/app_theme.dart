@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:thunderapp/shared/constants/app_enums.dart';
-import 'package:thunderapp/shared/constants/style_constants.dart';
-import 'package:thunderapp/shared/core/preferences_manager.dart';
+import 'package:finbuddy/shared/constants/app_enums.dart';
+import 'package:finbuddy/shared/constants/style_constants.dart';
+import 'package:finbuddy/shared/core/preferences_manager.dart';
 
 class AppTheme with ChangeNotifier {
   CurrentAppTheme _currentAppTheme = CurrentAppTheme.light;

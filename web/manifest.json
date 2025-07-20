@@ -1,6 +1,6 @@
 {
-    "name": "thunderapp",
-    "short_name": "thunderapp",
+    "name": "finbuddy",
+    "short_name": "finbuddy",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
