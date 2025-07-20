@@ -16,7 +16,7 @@ Os objetivos estratégicos do projeto 'Família & Escola' delineiam uma abordage
 ### [Plano de Projeto](https://docs.google.com/document/d/1T4hJV0T8A_vH_6RynDLP9Udx9Zb_fH7yHMETLeTu_tI/edit?tab=t.0#heading=h.bzu6mdlvylhd)
 ### [Histórias de Usuário](https://docs.google.com/document/d/1DZpZ8fS0tS7J_54NT5KN65dknsAnjkOLSBQoFSkXoxU/edit?usp=sharing)
 ### [Backlog](https://github.com/orgs/Dev-Sphere-Enterprise/projects/2/views/1)
-### [Figma](https://www.figma.com/design/dSgpU4drU4xwQTPVESidgh/Escola---Fam%C3%ADlia?node-id=0-1&t=z0b4W3Tvh3KWVLbm-1)
+### Figma -> [Gestor](https://www.figma.com/design/x1fDIfxtgW01CpjL5HsEwo/Escola---Fam%C3%ADlia--Gestor-?t=JPZuzNfPusSOwhk8-1) - [Responsável](https://www.figma.com/design/Lb9NmKY5q4GFDBcFa70DjT/Escola---Fam%C3%ADlia--Respons%C3%A1vel-?t=JPZuzNfPusSOwhk8-1)
 ### [MER](https://docs.google.com/document/d/1cFy4Q8tohVVRHTsRO8QiCzIY1uo9GW-Y1qpXMsl-Fzc/edit?usp=sharing)
 
 ## :hammer_and_wrench: Tecnologias Usadas
