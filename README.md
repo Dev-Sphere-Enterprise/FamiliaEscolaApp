@@ -33,6 +33,7 @@ O objetivo principal do projeto FinBuddy é "Democratizar o acesso a um gerencia
 ### [Flutter](https://flutter.dev/)
 *   Versão 3.32.5
 
+
 ## :construction: Status do Projeto
 Em andamento
 ## :keyboard: Acessando o sistema
