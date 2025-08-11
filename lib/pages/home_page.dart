@@ -18,7 +18,7 @@ class HomePage extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF0F3F7),
       appBar: AppBar(
-        title: Text("Dashboard $tipoPerfil"),
+        title: Text("Tela Inicial"),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -61,16 +61,18 @@ class HomePage extends StatelessWidget {
             const SizedBox(height: 16),
 
             // Botões de Atalho
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                _menuButton("Alunos", Icons.people, () {}),
-                _menuButton("Escola", Icons.school, () {}),
-                _menuButton("Turmas", Icons.class_, () {}),
-                _menuButton("Chat", Icons.chat, () {}),
-              ],
-            ),
+            Center(
+              child: Wrap(
+                spacing: 50,
+                runSpacing: 50,
+                children: [
+                  _menuButton("Alunos", Icons.people, () {}),
+                  _menuButton("Escola", Icons.school, () {}),
+                  _menuButton("Turmas", Icons.class_, () {}),
+                  _menuButton("Chat", Icons.chat, () {}),
+                ],
+              ),
+            )
           ],
         ),
       ),

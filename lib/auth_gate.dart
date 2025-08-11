@@ -24,7 +24,7 @@ class AuthGate extends StatelessWidget {
 
         return FutureBuilder<DocumentSnapshot>(
           future: FirebaseFirestore.instance
-              .collection('users')
+              .collection('users') // <- nome correto da coleção
               .doc(snapshot.data!.uid)
               .get(),
           builder: (context, userSnapshot) {
@@ -41,8 +41,8 @@ class AuthGate extends StatelessWidget {
             }
 
             final userData = userSnapshot.data!.data() as Map<String, dynamic>;
-            final nome = userData['nome'] ?? 'Usuário';
-            final tipoPerfil = userData['tipoPerfil'] ?? 'Responsável';
+            final nome = userData['name'] ?? 'Usuário'; // <- campo certo
+            final tipoPerfil = userData['role'] ?? 'responsavel'; // <- campo certo
 
             return HomePage(
               nomeUsuario: nome,
