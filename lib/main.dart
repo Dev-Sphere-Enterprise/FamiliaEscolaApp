@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'pages/splash_page.dart'; // import da tela splash
 import 'pages/login_page.dart';
-import 'pages/home_page.dart'; // Import da nova HomePage
+import 'pages/home_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -26,7 +27,7 @@ class FamiliaEscolaApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1E88E5)),
         useMaterial3: true,
       ),
-      home: const AuthGate(),
+      home: const SplashPage(), // Splash é a primeira tela
     );
   }
 }
