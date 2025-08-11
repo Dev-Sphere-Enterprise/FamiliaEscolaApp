@@ -1,5 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'register_page.dart';
+
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -203,11 +205,16 @@ class _LoginPageState extends State<LoginPage> {
                       ),
 
                       const SizedBox(height: 12),
-                      // Botão Cadastrar-se (navegue p/ tela de registro ou use FirebaseUI)
+
+                      // Botão Criar conta
                       OutlinedButton(
-                        onPressed: _loading ? null : () {
-                          // TODO: navegar para a tela de cadastro
-                          _showSnack('Tela de cadastro em breve 😉');
+                        onPressed: _loading
+                            ? null
+                            : () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const RegisterPage()),
+                          );
                         },
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),
