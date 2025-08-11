@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "937377525670",
+    "project_id": "familia-e-escola",
+    "storage_bucket": "familia-e-escola.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:937377525670:android:3bbf326869767ac618e967",
+        "android_client_info": {
+          "package_name": "com.dam.familiaEscola"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDz1vtf5JmbcRl2-AHzj6uk07g6smH9zuI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:937377525670:android:39844ff0cb7f11eb18e967",
+        "android_client_info": {
+          "package_name": "com.example.a"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDz1vtf5JmbcRl2-AHzj6uk07g6smH9zuI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
