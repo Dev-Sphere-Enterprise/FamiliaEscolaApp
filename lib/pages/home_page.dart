@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'profile_page.dart';
+
 
 class HomePage extends StatelessWidget {
   final String nomeUsuario;
@@ -13,7 +15,7 @@ class HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isGestor = tipoPerfil.toLowerCase() == 'gestor';
+    final isGestor = tipoPerfil.toLowerCase() == 'gestao';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF0F3F7),
@@ -79,8 +81,19 @@ class HomePage extends StatelessWidget {
 
       // Menu Inferior
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 1,
-        onTap: (index) {},
+        currentIndex: 2,
+        type: BottomNavigationBarType.fixed,
+        onTap: (index) {
+          if (index == 4){
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ProfilePage()),
+            );
+          }
+          if (index == 0) {
+            FirebaseAuth.instance.signOut();
+          }
+        },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.exit_to_app), label: "Sair"),
           BottomNavigationBarItem(icon: Icon(Icons.notifications), label: "Avisos"),
