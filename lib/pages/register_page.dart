@@ -16,6 +16,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final _passCtrl = TextEditingController();
   final _confirmPassCtrl = TextEditingController();
   final _cpfCtrl = TextEditingController();
+  final _birthDateCtrl = TextEditingController();
 
   bool _obscurePass = true;
   bool _obscureConfirm = true;
@@ -30,6 +31,7 @@ class _RegisterPageState extends State<RegisterPage> {
     _passCtrl.dispose();
     _confirmPassCtrl.dispose();
     _cpfCtrl.dispose();
+    _birthDateCtrl.dispose();
     super.dispose();
   }
 
@@ -55,6 +57,7 @@ class _RegisterPageState extends State<RegisterPage> {
         "name": _nameCtrl.text.trim(),
         "email": _emailCtrl.text.trim(),
         "cpf": _cpfCtrl.text.trim(),
+        "dataNascimento": _birthDateCtrl.text.trim(),
         "role": _role, // gestao ou responsavel
         "createdAt": FieldValue.serverTimestamp(),
       });
@@ -228,6 +231,19 @@ class _RegisterPageState extends State<RegisterPage> {
                           ),
                           validator: (v) =>
                           v!.trim().isEmpty ? 'Informe o CPF' : null,
+                        ),
+                        const SizedBox(height: 12),
+
+                        TextFormField(
+                          controller: _birthDateCtrl,
+                          keyboardType: TextInputType.datetime,
+                          decoration: const InputDecoration(
+                            labelText: 'Data de Nascimento',
+                            hintText: 'dd/mm/aaaa',
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (v) =>
+                          v!.trim().isEmpty ? 'Informe a data de nascimento' : null,
                         ),
                         const SizedBox(height: 12),
 
