@@ -34,7 +34,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
     try {
       final uid = _authService.currentUser!.uid;
       await _authService.updateUser(uid, {
-        'nome': _nameCtrl.text.trim(),
+        'name': _nameCtrl.text.trim(),
         'cpf': _cpfCtrl.text.trim(),
         'dataNascimento': _birthDateCtrl.text.trim(),
       });
@@ -72,7 +72,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
           final userData = snapshot.data!.data() ?? {};
 
           // Preenche os controllers com os dados existentes
-          _nameCtrl.text = userData['nome'] ?? '';
+          _nameCtrl.text = userData['name'] ?? '';
           _cpfCtrl.text = userData['cpf'] ?? '';
           _birthDateCtrl.text = userData['dataNascimento'] ?? '';
 

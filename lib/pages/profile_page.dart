@@ -87,7 +87,7 @@ class ProfilePage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildInfoRow("Nome:", userData['nome'] ?? '...'),
+            _buildInfoRow("Nome:", userData['name'] ?? '...'),
             const SizedBox(height: 8),
             _buildInfoRow("CPF:", userData['cpf'] ?? '...'),
             const SizedBox(height: 8),
