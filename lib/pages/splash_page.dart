@@ -1,7 +1,6 @@
-// lib/pages/splash_page.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../main.dart'; // para acessar o AuthGate
+import '../auth_gate.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
