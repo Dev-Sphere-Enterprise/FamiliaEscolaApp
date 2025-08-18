@@ -2,7 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
-import 'student_service.dart'; // Importe o novo serviço
+import '../services/school_service.dart'; // Corrigido e adicionado
+import '../services/student_service.dart'; // Corrigido
 import 'profile_edit_page.dart';
 
 class ProfilePage extends StatelessWidget {
@@ -11,24 +12,23 @@ class ProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authService = AuthService();
-    final studentService = StudentService(); // Crie uma instância do serviço
+    final studentService = StudentService();
+    final schoolService = SchoolService(); // Instância do serviço da escola
     final uid = authService.currentUser?.uid;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF0F3F7),
       appBar: AppBar(
-        title: const Text("Informações do Responsável"),
+        title: const Text("Informações do Perfil"),
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
-          // Botão para navegar para a tela de edição
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed: () {
-              // Navega para a tela de edição
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => ProfileEditPage()),
+                MaterialPageRoute(builder: (_) => const ProfileEditPage()),
               );
             },
           )
@@ -36,15 +36,17 @@ class ProfilePage extends StatelessWidget {
       ),
       body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>?>(
         stream: authService.getUserStream(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData || snapshot.data == null) {
+        builder: (context, userSnapshot) {
+          if (!userSnapshot.hasData || userSnapshot.data == null) {
             return const Center(child: CircularProgressIndicator());
           }
-          final userData = snapshot.data!.data() ?? {};
+          final userData = userSnapshot.data!.data() ?? {};
+          final tipoPerfil = userData['role'] ?? 'responsavel';
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _buildProfileHeader(
                   gradient: const LinearGradient(
@@ -54,20 +56,43 @@ class ProfilePage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 24),
-                _buildInfoCard(userData),
+
+                // --- LÓGICA PRINCIPAL ---
+                // Se for gestor, busca e exibe o nome da escola
+                if (tipoPerfil == 'gestao' && userData['id_escola'] != null)
+                  FutureBuilder<DocumentSnapshot>(
+                    future: schoolService.getSchoolData(userData['id_escola']),
+                    builder: (context, schoolSnapshot) {
+                      if (schoolSnapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (!schoolSnapshot.hasData || !schoolSnapshot.data!.exists) {
+                        return _buildInfoCard(userData, schoolName: 'Escola não encontrada');
+                      }
+                      final schoolData = schoolSnapshot.data!.data() as Map<String, dynamic>;
+                      final schoolName = schoolData['nome'] ?? 'Nome da escola não informado';
+
+                      return _buildInfoCard(userData, schoolName: schoolName);
+                    },
+                  )
+                else
+                // Se for responsável, mostra o card normal
+                  _buildInfoCard(userData),
+
                 const SizedBox(height: 24),
-                // Nova seção para exibir os alunos
-                if (uid != null)
+
+                // Se for responsável, mostra a lista de alunos
+                if (uid != null && tipoPerfil == 'responsavel')
                   StreamBuilder<List<DocumentSnapshot>>(
                     stream: studentService.getStudentsForResponsible(uid),
                     builder: (context, studentSnapshot) {
-                      if (!studentSnapshot.hasData) {
+                      if (studentSnapshot.connectionState == ConnectionState.waiting) {
                         return const Center(child: CircularProgressIndicator());
                       }
-                      final students = studentSnapshot.data!;
-                      if (students.isEmpty) {
-                        return const Text('Nenhum aluno vinculado.');
+                      if (!studentSnapshot.hasData || studentSnapshot.data!.isEmpty) {
+                        return const Center(child: Text('Nenhum aluno vinculado.'));
                       }
+                      final students = studentSnapshot.data!;
                       return _buildStudentsList(students);
                     },
                   ),
@@ -76,12 +101,10 @@ class ProfilePage extends StatelessWidget {
           );
         },
       ),
-      // Copiando a BottomNavigationBar da HomePage para consistência
       bottomNavigationBar: _buildBottomNav(context),
     );
   }
 
-  // Novo widget para construir a lista de alunos
   Widget _buildStudentsList(List<DocumentSnapshot> students) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -121,13 +144,14 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoCard(Map<String, dynamic> userData) {
+  // Assinatura do método modificada para aceitar um parâmetro nomeado opcional
+  Widget _buildInfoCard(Map<String, dynamic> userData, {String? schoolName}) {
     return Card(
-      color: const Color(0xFFD9D9D9), // Cinza claro semelhante ao da imagem
+      color: const Color(0xFFD9D9D9),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
-      elevation: 0, // sem sombra para ficar igual à imagem
+      elevation: 0,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -138,6 +162,12 @@ class ProfilePage extends StatelessWidget {
             _buildInfoRow("CPF:", userData['cpf'] ?? '...'),
             const SizedBox(height: 8),
             _buildInfoRow("Data de Nascimento:", userData['dataNascimento'] ?? '...'),
+
+            // Condição para exibir a linha da escola apenas se 'schoolName' for fornecido
+            if (schoolName != null && schoolName.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              _buildInfoRow("Escola:", schoolName),
+            ]
           ],
         ),
       ),
@@ -175,13 +205,12 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  // BottomNavigationBar para manter a consistência
   BottomNavigationBar _buildBottomNav(BuildContext context) {
     return BottomNavigationBar(
-      currentIndex: 4, // Perfil
+      currentIndex: 4,
       type: BottomNavigationBarType.fixed,
       onTap: (index) {
-        if (index == 2) Navigator.pop(context); // Volta pra Home
+        if (index == 2) Navigator.pop(context);
         if (index == 0) FirebaseAuth.instance.signOut();
       },
       items: const [
