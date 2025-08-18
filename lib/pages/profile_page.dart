@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
+import 'student_service.dart'; // Importe o novo serviço
 import 'profile_edit_page.dart';
 
 class ProfilePage extends StatelessWidget {
@@ -10,6 +11,7 @@ class ProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authService = AuthService();
+    final studentService = StudentService(); // Crie uma instância do serviço
     final uid = authService.currentUser?.uid;
 
     return Scaffold(
@@ -53,6 +55,22 @@ class ProfilePage extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
                 _buildInfoCard(userData),
+                const SizedBox(height: 24),
+                // Nova seção para exibir os alunos
+                if (uid != null)
+                  StreamBuilder<List<DocumentSnapshot>>(
+                    stream: studentService.getStudentsForResponsible(uid),
+                    builder: (context, studentSnapshot) {
+                      if (!studentSnapshot.hasData) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      final students = studentSnapshot.data!;
+                      if (students.isEmpty) {
+                        return const Text('Nenhum aluno vinculado.');
+                      }
+                      return _buildStudentsList(students);
+                    },
+                  ),
               ],
             ),
           );
@@ -60,6 +78,34 @@ class ProfilePage extends StatelessWidget {
       ),
       // Copiando a BottomNavigationBar da HomePage para consistência
       bottomNavigationBar: _buildBottomNav(context),
+    );
+  }
+
+  // Novo widget para construir a lista de alunos
+  Widget _buildStudentsList(List<DocumentSnapshot> students) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Alunos Vinculados',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: students.length,
+          itemBuilder: (context, index) {
+            final studentData = students[index].data() as Map<String, dynamic>;
+            return Card(
+              child: ListTile(
+                title: Text(studentData['name'] ?? 'Nome não encontrado'),
+                subtitle: Text('Nascimento: ${studentData['birthDate'] ?? '...'}'),
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 
@@ -92,8 +138,6 @@ class ProfilePage extends StatelessWidget {
             _buildInfoRow("CPF:", userData['cpf'] ?? '...'),
             const SizedBox(height: 8),
             _buildInfoRow("Data de Nascimento:", userData['dataNascimento'] ?? '...'),
-            const SizedBox(height: 8),
-            _buildInfoRow("Responsável por:", userData['responsavelPor'] ?? '...'),
           ],
         ),
       ),
