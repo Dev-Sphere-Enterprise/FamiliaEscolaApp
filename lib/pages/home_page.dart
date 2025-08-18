@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'profile_page.dart';
-
+import 'add_student_page.dart'; 
 
 class HomePage extends StatelessWidget {
   final String nomeUsuario;
@@ -72,6 +72,14 @@ class HomePage extends StatelessWidget {
                   _menuButton("Escola", Icons.school, () {}),
                   _menuButton("Turmas", Icons.class_, () {}),
                   _menuButton("Chat", Icons.chat, () {}),
+                  // Botão para adicionar aluno, visível apenas para o gestor
+                  if (isGestor)
+                    _menuButton("Adicionar Aluno", Icons.person_add, () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const AddStudentPage()),
+                      );
+                    }),
                 ],
               ),
             )
