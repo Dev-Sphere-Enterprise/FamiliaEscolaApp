@@ -1,4 +1,4 @@
-import 'package:FamiliaEscolaApp/pages/student_service.dart';
+import 'package:FamiliaEscolaApp/services/student_service.dart';
 import 'package:flutter/material.dart';
 
 class AddStudentPage extends StatefulWidget {
