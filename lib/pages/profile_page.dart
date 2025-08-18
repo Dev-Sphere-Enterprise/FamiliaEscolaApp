@@ -2,9 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
-import '../services/school_service.dart'; // Corrigido e adicionado
-import '../services/student_service.dart'; // Corrigido
+import '../services/student_service.dart';
 import 'profile_edit_page.dart';
+import 'school_details_page.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -13,7 +13,6 @@ class ProfilePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final authService = AuthService();
     final studentService = StudentService();
-    final schoolService = SchoolService(); // Instância do serviço da escola
     final uid = authService.currentUser?.uid;
 
     return Scaffold(
@@ -36,12 +35,13 @@ class ProfilePage extends StatelessWidget {
       ),
       body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>?>(
         stream: authService.getUserStream(),
-        builder: (context, userSnapshot) {
-          if (!userSnapshot.hasData || userSnapshot.data == null) {
+        builder: (context, snapshot) {
+          if (!snapshot.hasData || snapshot.data == null) {
             return const Center(child: CircularProgressIndicator());
           }
-          final userData = userSnapshot.data!.data() ?? {};
+          final userData = snapshot.data!.data() ?? {};
           final tipoPerfil = userData['role'] ?? 'responsavel';
+          final schoolId = userData['id_escola'];
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
@@ -56,32 +56,13 @@ class ProfilePage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 24),
-
-                // --- LÓGICA PRINCIPAL ---
-                // Se for gestor, busca e exibe o nome da escola
-                if (tipoPerfil == 'gestao' && userData['id_escola'] != null)
-                  FutureBuilder<DocumentSnapshot>(
-                    future: schoolService.getSchoolData(userData['id_escola']),
-                    builder: (context, schoolSnapshot) {
-                      if (schoolSnapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-                      if (!schoolSnapshot.hasData || !schoolSnapshot.data!.exists) {
-                        return _buildInfoCard(userData, schoolName: 'Escola não encontrada');
-                      }
-                      final schoolData = schoolSnapshot.data!.data() as Map<String, dynamic>;
-                      final schoolName = schoolData['nome'] ?? 'Nome da escola não informado';
-
-                      return _buildInfoCard(userData, schoolName: schoolName);
-                    },
-                  )
-                else
-                // Se for responsável, mostra o card normal
-                  _buildInfoCard(userData),
-
+                _buildInfoCard(userData),
                 const SizedBox(height: 24),
 
-                // Se for responsável, mostra a lista de alunos
+                if (tipoPerfil == 'gestao' && schoolId != null)
+                  _buildManageSchoolCard(context, schoolId),
+
+                // Seção de alunos (apenas para responsáveis)
                 if (uid != null && tipoPerfil == 'responsavel')
                   StreamBuilder<List<DocumentSnapshot>>(
                     stream: studentService.getStudentsForResponsible(uid),
@@ -102,6 +83,26 @@ class ProfilePage extends StatelessWidget {
         },
       ),
       bottomNavigationBar: _buildBottomNav(context),
+    );
+  }
+  
+  Widget _buildManageSchoolCard(BuildContext context, String schoolId) {
+    return Card(
+      elevation: 2,
+      child: ListTile(
+        leading: const Icon(Icons.school, color: Colors.blueAccent),
+        title: const Text('Gerenciar Escola'),
+        subtitle: const Text('Editar ou excluir os dados da sua escola'),
+        trailing: const Icon(Icons.arrow_forward_ios),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => SchoolDetailsPage(schoolId: schoolId),
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -144,8 +145,7 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  // Assinatura do método modificada para aceitar um parâmetro nomeado opcional
-  Widget _buildInfoCard(Map<String, dynamic> userData, {String? schoolName}) {
+  Widget _buildInfoCard(Map<String, dynamic> userData) {
     return Card(
       color: const Color(0xFFD9D9D9),
       shape: RoundedRectangleBorder(
@@ -162,12 +162,6 @@ class ProfilePage extends StatelessWidget {
             _buildInfoRow("CPF:", userData['cpf'] ?? '...'),
             const SizedBox(height: 8),
             _buildInfoRow("Data de Nascimento:", userData['dataNascimento'] ?? '...'),
-
-            // Condição para exibir a linha da escola apenas se 'schoolName' for fornecido
-            if (schoolName != null && schoolName.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              _buildInfoRow("Escola:", schoolName),
-            ]
           ],
         ),
       ),
