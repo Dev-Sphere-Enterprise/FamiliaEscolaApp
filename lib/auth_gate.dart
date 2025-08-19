@@ -1,5 +1,5 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'pages/home_page.dart';
 import 'pages/login_page.dart';
@@ -12,22 +12,23 @@ class AuthGate extends StatelessWidget {
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (context, authSnapshot) {
-        if (authSnapshot.connectionState == ConnectionState.waiting) {
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
 
-        if (!authSnapshot.hasData) {
+        // ❌ Usuário não logado → vai para Login
+        if (!snapshot.hasData) {
           return const LoginPage();
         }
 
-        // Se o usuário está logado, agora usamos um StreamBuilder para ouvir as alterações no perfil
+        // ✅ Usuário logado → buscar dados no Firestore
         return StreamBuilder<DocumentSnapshot>(
           stream: FirebaseFirestore.instance
               .collection('users')
-              .doc(authSnapshot.data!.uid)
+              .doc(snapshot.data!.uid)
               .snapshots(),
           builder: (context, userSnapshot) {
             if (userSnapshot.connectionState == ConnectionState.waiting) {
@@ -37,11 +38,10 @@ class AuthGate extends StatelessWidget {
             }
 
             if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
-              // Isso pode acontecer brevemente se o usuário for recém-criado.
-              // Pode ser bom deslogar para evitar loops ou mostrar uma mensagem específica.
               FirebaseAuth.instance.signOut();
               return const Scaffold(
-                body: Center(child: Text("Erro: dados do usuário não encontrados. Faça login novamente.")),
+                body: Center(
+                    child: Text("Erro: dados do usuário não encontrados. Faça login novamente.")),
               );
             }
 
@@ -52,12 +52,10 @@ class AuthGate extends StatelessWidget {
             if (tipoPerfil == 'gestao') {
               final idEscola = userData['id_escola'];
               if (idEscola == null || idEscola.toString().isEmpty) {
-                // Se for gestor e NÃO tiver escola, vai para a tela de cadastro de escola
                 return const AddSchoolPage();
               }
             }
 
-            // Se for responsável ou gestor com escola, vai para a HomePage
             return HomePage(
               nomeUsuario: nome,
               tipoPerfil: tipoPerfil,

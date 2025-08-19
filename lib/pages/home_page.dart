@@ -1,115 +1,105 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'profile_page.dart';
-import 'add_student_page.dart'; 
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+import '../widgets/main_scaffold.dart';
+import 'add_student_page.dart';
 
 class HomePage extends StatelessWidget {
-  final String nomeUsuario;
-  final String tipoPerfil;
-
-  const HomePage({
-    super.key,
-    required this.nomeUsuario,
-    required this.tipoPerfil,
-  });
+  const HomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final isGestor = tipoPerfil.toLowerCase() == 'gestao';
+    final uid = FirebaseAuth.instance.currentUser?.uid;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF0F3F7),
-      appBar: AppBar(
-        title: Text("Tela Inicial"),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => FirebaseAuth.instance.signOut(),
-          )
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "Olá, $nomeUsuario!",
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
-                color: Colors.blue,
-              ),
-            ),
-            const SizedBox(height: 16),
+    if (uid == null) {
+      return const Scaffold(
+        body: Center(child: Text("Usuário não autenticado")),
+      );
+    }
 
-            // Quadro de Avisos
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.amber[100],
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Center(
-                  child: Text(
-                    "Quadro de Avisos",
-                    style: TextStyle(fontSize: 16),
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance.collection('users').doc(uid).snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (!snapshot.hasData || !snapshot.data!.exists) {
+          return const Scaffold(
+            body: Center(child: Text("Dados do usuário não encontrados")),
+          );
+        }
+
+        final dados = snapshot.data!.data() as Map<String, dynamic>;
+        final nomeUsuario = dados['name'] ?? 'Usuário';
+        final tipoPerfil = dados['role'] ?? 'responsavel';
+        final isGestor = tipoPerfil == 'gestao';
+
+        return MainScaffold(
+          currentIndex: 2, // Home
+          body: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Olá, $nomeUsuario!",
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                    color: Colors.blue,
                   ),
                 ),
-              ),
+                const SizedBox(height: 16),
+
+                // 🔔 Quadro de Avisos
+                Expanded(
+                  child: Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.amber[100],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        "Quadro de Avisos",
+                        style: TextStyle(fontSize: 16),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // 🔘 Botões de Atalho
+                Center(
+                  child: Wrap(
+                    spacing: 50,
+                    runSpacing: 50,
+                    children: [
+                      _menuButton("Alunos", Icons.people, () {}),
+                      _menuButton("Escola", Icons.school, () {}),
+                      _menuButton("Turmas", Icons.class_, () {}),
+                      _menuButton("Chat", Icons.chat, () {}),
+                      if (isGestor)
+                        _menuButton("Adicionar Aluno", Icons.person_add, () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const AddStudentPage(),
+                            ),
+                          );
+                        }),
+                    ],
+                  ),
+                )
+              ],
             ),
-
-            const SizedBox(height: 16),
-
-            // Botões de Atalho
-            Center(
-              child: Wrap(
-                spacing: 50,
-                runSpacing: 50,
-                children: [
-                  _menuButton("Alunos", Icons.people, () {}),
-                  _menuButton("Escola", Icons.school, () {}),
-                  _menuButton("Turmas", Icons.class_, () {}),
-                  _menuButton("Chat", Icons.chat, () {}),
-                  // Botão para adicionar aluno, visível apenas para o gestor
-                  if (isGestor)
-                    _menuButton("Adicionar Aluno", Icons.person_add, () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const AddStudentPage()),
-                      );
-                    }),
-                ],
-              ),
-            )
-          ],
-        ),
-      ),
-
-      // Menu Inferior
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 2,
-        type: BottomNavigationBarType.fixed,
-        onTap: (index) {
-          if (index == 4){
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const ProfilePage()),
-            );
-          }
-          if (index == 0) {
-            FirebaseAuth.instance.signOut();
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.exit_to_app), label: "Sair"),
-          BottomNavigationBarItem(icon: Icon(Icons.notifications), label: "Avisos"),
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-          BottomNavigationBarItem(icon: Icon(Icons.message), label: "Mensagens"),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: "Perfil"),
-        ],
-      ),
+          ),
+        );
+      },
     );
   }
 

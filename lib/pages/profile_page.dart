@@ -1,8 +1,11 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
 import '../services/auth_service.dart';
 import '../services/student_service.dart';
+import '../widgets/main_scaffold.dart';
+
 import 'profile_edit_page.dart';
 import 'school_details_page.dart';
 
@@ -15,35 +18,35 @@ class ProfilePage extends StatelessWidget {
     final studentService = StudentService();
     final uid = authService.currentUser?.uid;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF0F3F7),
-      appBar: AppBar(
-        title: const Text("Informações do Perfil"),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ProfileEditPage()),
-              );
-            },
-          )
-        ],
-      ),
-      body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>?>(
-        stream: authService.getUserStream(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData || snapshot.data == null) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final userData = snapshot.data!.data() ?? {};
-          final tipoPerfil = userData['role'] ?? 'responsavel';
-          final schoolId = userData['id_escola'];
+    final userStream = authService.getUserStream();
+    if (userStream == null) {
+      return const Scaffold(
+        body: Center(child: Text("Usuário não autenticado")),
+      );
+    }
 
-          return SingleChildScrollView(
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: userStream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (!snapshot.hasData || snapshot.data?.data() == null) {
+          return const Scaffold(
+            body: Center(child: Text("Dados do usuário não encontrados")),
+          );
+        }
+
+        final userData = snapshot.data!.data()!;
+        final tipoPerfil = userData['role'] ?? 'responsavel';
+        final schoolId = userData['id_escola'];
+
+        return MainScaffold(
+          currentIndex: 4, // Perfil ativo
+          body: SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -59,10 +62,28 @@ class ProfilePage extends StatelessWidget {
                 _buildInfoCard(userData),
                 const SizedBox(height: 24),
 
+                // Botão Editar Perfil
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const ProfileEditPage()),
+                      );
+                    },
+                    icon: const Icon(Icons.edit),
+                    label: const Text("Editar Perfil"),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Card de gestão → Gerenciar Escola
                 if (tipoPerfil == 'gestao' && schoolId != null)
                   _buildManageSchoolCard(context, schoolId),
 
-                // Seção de alunos (apenas para responsáveis)
+                // Lista de alunos para responsáveis
                 if (uid != null && tipoPerfil == 'responsavel')
                   StreamBuilder<List<DocumentSnapshot>>(
                     stream: studentService.getStudentsForResponsible(uid),
@@ -79,13 +100,12 @@ class ProfilePage extends StatelessWidget {
                   ),
               ],
             ),
-          );
-        },
-      ),
-      bottomNavigationBar: _buildBottomNav(context),
+          ),
+        );
+      },
     );
   }
-  
+
   Widget _buildManageSchoolCard(BuildContext context, String schoolId) {
     return Card(
       elevation: 2,
@@ -161,59 +181,4 @@ class ProfilePage extends StatelessWidget {
             const SizedBox(height: 8),
             _buildInfoRow("CPF:", userData['cpf'] ?? '...'),
             const SizedBox(height: 8),
-            _buildInfoRow("Data de Nascimento:", userData['dataNascimento'] ?? '...'),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontWeight: FontWeight.w500,
-              fontSize: 14,
-              color: Colors.black,
-            ),
-          ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.black,
-              ),
-              softWrap: true,
-              overflow: TextOverflow.visible,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  BottomNavigationBar _buildBottomNav(BuildContext context) {
-    return BottomNavigationBar(
-      currentIndex: 4,
-      type: BottomNavigationBarType.fixed,
-      onTap: (index) {
-        if (index == 2) Navigator.pop(context);
-        if (index == 0) FirebaseAuth.instance.signOut();
-      },
-      items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.exit_to_app), label: "Sair"),
-        BottomNavigationBarItem(icon: Icon(Icons.notifications), label: "Avisos"),
-        BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-        BottomNavigationBarItem(icon: Icon(Icons.message), label: "Mensagens"),
-        BottomNavigationBarItem(icon: Icon(Icons.person), label: "Perfil"),
-      ],
-    );
-  }
-}
+            _buildInfoRow("Data de Nascimento:", us_
