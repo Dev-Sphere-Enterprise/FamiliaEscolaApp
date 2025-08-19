@@ -8,11 +8,13 @@ import 'package:FamiliaEscolaApp/pages/profile_page.dart';
 class MainScaffold extends StatelessWidget {
   final Widget body;
   final int currentIndex;
+  final Widget? floatingActionButton;
 
   const MainScaffold({
     super.key,
     required this.body,
     required this.currentIndex,
+    this.floatingActionButton,
   });
 
   void _onTap(BuildContext context, int index) {
@@ -77,6 +79,7 @@ class MainScaffold extends StatelessWidget {
           BottomNavigationBarItem(icon: Icon(Icons.person), label: "Perfil"),
         ],
       ),
+      floatingActionButton: floatingActionButton,
     );
   }
 }
