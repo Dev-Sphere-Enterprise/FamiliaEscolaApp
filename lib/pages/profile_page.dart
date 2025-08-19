@@ -1,7 +1,7 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/auth_service.dart';
+import '../widgets/main_scaffold.dart';
 import 'profile_edit_page.dart';
 
 class ProfilePage extends StatelessWidget {
@@ -10,37 +10,35 @@ class ProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authService = AuthService();
-    final uid = authService.currentUser?.uid;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF0F3F7),
-      appBar: AppBar(
-        title: const Text("Informações do Responsável"),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        actions: [
-          // Botão para navegar para a tela de edição
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: () {
-              // Navega para a tela de edição
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => ProfileEditPage()),
-              );
-            },
-          )
-        ],
-      ),
-      body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>?>(
-        stream: authService.getUserStream(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData || snapshot.data == null) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final userData = snapshot.data!.data() ?? {};
+    // Garantir que temos o stream do usuário logado
+    final userStream = authService.getUserStream();
+    if (userStream == null) {
+      return const Scaffold(
+        body: Center(child: Text("Usuário não autenticado")),
+      );
+    }
 
-          return SingleChildScrollView(
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: userStream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (!snapshot.hasData || snapshot.data?.data() == null) {
+          return const Scaffold(
+            body: Center(child: Text("Dados do usuário não encontrados")),
+          );
+        }
+
+        final userData = snapshot.data!.data()!;
+
+        return MainScaffold(
+          currentIndex: 4, // Perfil ativo
+          body: SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               children: [
@@ -53,13 +51,27 @@ class ProfilePage extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
                 _buildInfoCard(userData),
+                const SizedBox(height: 16),
+
+                // Botão Editar Perfil
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const ProfileEditPage()),
+                      );
+                    },
+                    icon: const Icon(Icons.edit),
+                    label: const Text("Editar Perfil"),
+                  ),
+                ),
               ],
             ),
-          );
-        },
-      ),
-      // Copiando a BottomNavigationBar da HomePage para consistência
-      bottomNavigationBar: _buildBottomNav(context),
+          ),
+        );
+      },
     );
   }
 
@@ -77,11 +89,11 @@ class ProfilePage extends StatelessWidget {
 
   Widget _buildInfoCard(Map<String, dynamic> userData) {
     return Card(
-      color: const Color(0xFFD9D9D9), // Cinza claro semelhante ao da imagem
+      color: const Color(0xFFD9D9D9),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
-      elevation: 0, // sem sombra para ficar igual à imagem
+      elevation: 0,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -128,25 +140,6 @@ class ProfilePage extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-
-  // BottomNavigationBar para manter a consistência
-  BottomNavigationBar _buildBottomNav(BuildContext context) {
-    return BottomNavigationBar(
-      currentIndex: 4, // Perfil
-      type: BottomNavigationBarType.fixed,
-      onTap: (index) {
-        if (index == 2) Navigator.pop(context); // Volta pra Home
-        if (index == 0) FirebaseAuth.instance.signOut();
-      },
-      items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.exit_to_app), label: "Sair"),
-        BottomNavigationBarItem(icon: Icon(Icons.notifications), label: "Avisos"),
-        BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-        BottomNavigationBarItem(icon: Icon(Icons.message), label: "Mensagens"),
-        BottomNavigationBarItem(icon: Icon(Icons.person), label: "Perfil"),
-      ],
     );
   }
 }
