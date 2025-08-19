@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../widgets/main_scaffold.dart';
 import 'add_student_page.dart';
+import 'avisos_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -18,7 +19,6 @@ class HomePage extends StatelessWidget {
       );
     }
 
-    // 🔄 Sempre puxa os dados do usuário logado no Firestore
     return StreamBuilder<DocumentSnapshot>(
       stream: FirebaseFirestore.instance
           .collection('users')
@@ -59,53 +59,164 @@ class HomePage extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
 
-                // 🔔 Quadro de Avisos puxado do Firestore
+                // 🔔 Quadro de Avisos (3 mais recentes)
                 Flexible(
                   child: StreamBuilder<QuerySnapshot>(
                     stream: FirebaseFirestore.instance
                         .collection('avisos')
-                        .orderBy('dataCriacao', descending: true)
+                        .orderBy('data', descending: true)
+                        .limit(3)
                         .snapshots(),
                     builder: (context, avisoSnapshot) {
-                      if (avisoSnapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
+                      if (avisoSnapshot.connectionState ==
+                          ConnectionState.waiting) {
+                        return const Center(
+                            child: CircularProgressIndicator());
                       }
 
-                      if (!avisoSnapshot.hasData || avisoSnapshot.data!.docs.isEmpty) {
-                        return const Center(child: Text("Nenhum aviso disponível"));
+                      if (!avisoSnapshot.hasData ||
+                          avisoSnapshot.data!.docs.isEmpty) {
+                        return const Center(
+                            child: Text("Nenhum aviso disponível"));
                       }
 
                       final avisos = avisoSnapshot.data!.docs;
+                      final uid = FirebaseAuth.instance.currentUser?.uid;
 
-                      return ListView.builder(
-                        itemCount: avisos.length,
-                        itemBuilder: (context, index) {
-                          final aviso = avisos[index].data() as Map<String, dynamic>;
-                          final titulo = aviso['titulo'] ?? "Sem título";
-                          final mensagem = aviso['mensagem'] ?? "";
-                          final data = (aviso['dataCriacao'] as Timestamp?)?.toDate();
+                      // 🔎 contar não lidos (só se for responsável)
+                      int naoLidos = 0;
+                      if (tipoPerfil == 'responsavel') {
+                        for (var aviso in avisos) {
+                          final data =
+                          aviso.data() as Map<String, dynamic>;
+                          final lidoPor =
+                          List<String>.from(data['lidoPor'] ?? []);
+                          if (uid != null && !lidoPor.contains(uid)) {
+                            naoLidos++;
+                          }
+                        }
+                      }
 
-                          return Card(
-                            margin: const EdgeInsets.symmetric(vertical: 8),
-                            child: ListTile(
-                              title: Text(
-                                titulo,
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(mensagem),
-                                  if (data != null)
-                                    Text(
-                                      "${data.day}/${data.month}/${data.year} ${data.hour}:${data.minute.toString().padLeft(2, '0')}",
-                                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      return Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300], // fundo mais escuro
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // 🔴 título + badge (só para responsável)
+                            Row(
+                              mainAxisAlignment:
+                              MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  "Quadro de Avisos",
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                if (tipoPerfil == 'responsavel' &&
+                                    naoLidos > 0)
+                                  Text(
+                                    "🔴 $naoLidos novos",
+                                    style: const TextStyle(
+                                      color: Colors.red,
+                                      fontWeight: FontWeight.bold,
                                     ),
-                                ],
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+
+                            // lista resumida de avisos
+                            Expanded(
+                              child: ListView.builder(
+                                itemCount: avisos.length,
+                                itemBuilder: (context, index) {
+                                  final aviso = avisos[index].data()
+                                  as Map<String, dynamic>;
+                                  final titulo =
+                                      aviso['titulo'] ?? "Sem título";
+                                  final mensagem =
+                                      aviso['mensagem'] ?? "";
+                                  final data =
+                                  (aviso['data'] as Timestamp?)
+                                      ?.toDate();
+
+                                  // só marca cores/lido se for responsável
+                                  bool jaLido = true;
+                                  if (tipoPerfil == 'responsavel') {
+                                    final lidoPor =
+                                    List<String>.from(aviso['lidoPor'] ?? []);
+                                    jaLido = uid != null &&
+                                        lidoPor.contains(uid);
+                                  }
+
+                                  return Card(
+                                    color: (tipoPerfil == 'responsavel')
+                                        ? (jaLido
+                                        ? Colors.white
+                                        : Colors.amber[100])
+                                        : Colors.white,
+                                    margin: const EdgeInsets.symmetric(
+                                        vertical: 4),
+                                    child: ListTile(
+                                      title: Text(
+                                        titulo,
+                                        style: TextStyle(
+                                          fontWeight: (tipoPerfil ==
+                                              'responsavel' &&
+                                              !jaLido)
+                                              ? FontWeight.bold
+                                              : FontWeight.normal,
+                                        ),
+                                      ),
+                                      subtitle: Column(
+                                        crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            mensagem,
+                                            maxLines: 1,
+                                            overflow:
+                                            TextOverflow.ellipsis,
+                                          ),
+                                          if (data != null)
+                                            Text(
+                                              "${data.day}/${data.month}/${data.year}",
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey,
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
                             ),
-                          );
-                        },
+
+                            // botão ver todos
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const AvisosPage(),
+                                    ),
+                                  );
+                                },
+                                child: const Text("Ver todos"),
+                              ),
+                            ),
+                          ],
+                        ),
                       );
                     },
                   ),
@@ -128,7 +239,8 @@ class HomePage extends StatelessWidget {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const AddStudentPage(),
+                              builder: (context) =>
+                              const AddStudentPage(),
                             ),
                           );
                         }),
