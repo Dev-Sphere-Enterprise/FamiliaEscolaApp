@@ -2,7 +2,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'register_page.dart';
 
-
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -37,9 +36,9 @@ class _LoginPageState extends State<LoginPage> {
       // authStateChanges do AuthGate cuidará da navegação
     } on FirebaseAuthException catch (e) {
       final message = _mapFirebaseError(e);
-      _showSnack(message);
+      _showSnack(message, isError: true);
     } catch (_) {
-      _showSnack('Ocorreu um erro inesperado. Tente novamente.');
+      _showSnack('Ocorreu um erro inesperado. Tente novamente.', isError: true);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -48,37 +47,43 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> _forgotPassword() async {
     final email = _emailCtrl.text.trim();
     if (email.isEmpty) {
-      _showSnack('Informe seu e-mail para receber o link de redefinição.');
+      _showSnack('Informe seu e-mail para receber o link de redefinição.', isError: true);
       return;
     }
     try {
       await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
       _showSnack('Enviamos um e-mail para redefinir sua senha.');
     } on FirebaseAuthException catch (e) {
-      _showSnack(_mapFirebaseError(e));
+      _showSnack(_mapFirebaseError(e), isError: true);
     }
   }
 
   String _mapFirebaseError(FirebaseAuthException e) {
     switch (e.code) {
       case 'invalid-email':
-        return 'E-mail inválido.';
+        return 'O e-mail informado não é válido.';
       case 'user-disabled':
-        return 'Usuário desabilitado.';
+        return 'Este usuário foi desativado. Contate o suporte.';
       case 'user-not-found':
-        return 'Usuário não encontrado.';
+        return 'Não encontramos nenhuma conta com este e-mail.';
       case 'wrong-password':
-        return 'Senha incorreta.';
+        return 'A senha digitada está incorreta.';
       case 'too-many-requests':
-        return 'Muitas tentativas. Tente mais tarde.';
+        return 'Muitas tentativas de login. Tente novamente mais tarde.';
+      case 'invalid-credential':
+        return 'Credenciais inválidas. Verifique e tente novamente.';
       default:
-        return 'Falha na autenticação (${e.code}).';
+        return 'Erro ao entrar. Verifique suas credenciais e tente novamente.';
     }
   }
 
-  void _showSnack(String msg) {
+  void _showSnack(String msg, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg)),
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: isError ? Colors.red : Colors.green,
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 
@@ -123,7 +128,10 @@ class _LoginPageState extends State<LoginPage> {
                             const SizedBox(height: 8),
                             Text(
                               'Entre com sua conta',
-                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .headlineSmall
+                                  ?.copyWith(
                                 fontWeight: FontWeight.w800,
                               ),
                               textAlign: TextAlign.left,
@@ -146,8 +154,11 @@ class _LoginPageState extends State<LoginPage> {
                                 border: OutlineInputBorder(),
                               ),
                               validator: (v) {
-                                if ((v ?? '').trim().isEmpty) return 'Informe o e-mail';
-                                if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(v!.trim())) {
+                                if ((v ?? '').trim().isEmpty) {
+                                  return 'Informe o e-mail';
+                                }
+                                if (!RegExp(r'^[^@]+@[^@]+\.[^@]+')
+                                    .hasMatch(v!.trim())) {
                                   return 'E-mail inválido';
                                 }
                                 return null;
@@ -162,13 +173,20 @@ class _LoginPageState extends State<LoginPage> {
                                 labelText: 'Senha',
                                 border: const OutlineInputBorder(),
                                 suffixIcon: IconButton(
-                                  icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility),
-                                  onPressed: () => setState(() => _obscure = !_obscure),
+                                  icon: Icon(_obscure
+                                      ? Icons.visibility_off
+                                      : Icons.visibility),
+                                  onPressed: () =>
+                                      setState(() => _obscure = !_obscure),
                                 ),
                               ),
                               validator: (v) {
-                                if ((v ?? '').isEmpty) return 'Informe a senha';
-                                if ((v!).length < 6) return 'Mínimo de 6 caracteres';
+                                if ((v ?? '').isEmpty) {
+                                  return 'Informe a senha';
+                                }
+                                if ((v!).length < 6) {
+                                  return 'Mínimo de 6 caracteres';
+                                }
                                 return null;
                               },
                             ),
@@ -199,7 +217,8 @@ class _LoginPageState extends State<LoginPage> {
                             ? const SizedBox(
                           height: 20,
                           width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child:
+                          CircularProgressIndicator(strokeWidth: 2),
                         )
                             : const Text('Entrar'),
                       ),
@@ -213,7 +232,8 @@ class _LoginPageState extends State<LoginPage> {
                             : () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => const RegisterPage()),
+                            MaterialPageRoute(
+                                builder: (_) => const RegisterPage()),
                           );
                         },
                         style: OutlinedButton.styleFrom(
@@ -221,7 +241,8 @@ class _LoginPageState extends State<LoginPage> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          side: const BorderSide(width: 0, color: Colors.transparent),
+                          side: const BorderSide(
+                              width: 0, color: Colors.transparent),
                           backgroundColor: const Color(0xFF19A75E),
                           foregroundColor: Colors.white,
                         ),
