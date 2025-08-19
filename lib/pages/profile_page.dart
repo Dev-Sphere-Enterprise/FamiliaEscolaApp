@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import '../services/auth_service.dart';
+import '../services/student_service.dart';
 import '../widgets/main_scaffold.dart';
+
 import 'profile_edit_page.dart';
+import 'school_details_page.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -10,8 +15,9 @@ class ProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authService = AuthService();
+    final studentService = StudentService();
+    final uid = authService.currentUser?.uid;
 
-    // Garantir que temos o stream do usuário logado
     final userStream = authService.getUserStream();
     if (userStream == null) {
       return const Scaffold(
@@ -35,12 +41,15 @@ class ProfilePage extends StatelessWidget {
         }
 
         final userData = snapshot.data!.data()!;
+        final tipoPerfil = userData['role'] ?? 'responsavel';
+        final schoolId = userData['id_escola'];
 
         return MainScaffold(
           currentIndex: 4, // Perfil ativo
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _buildProfileHeader(
                   gradient: const LinearGradient(
@@ -51,7 +60,7 @@ class ProfilePage extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
                 _buildInfoCard(userData),
-                const SizedBox(height: 16),
+                const SizedBox(height: 24),
 
                 // Botão Editar Perfil
                 SizedBox(
@@ -67,11 +76,80 @@ class ProfilePage extends StatelessWidget {
                     label: const Text("Editar Perfil"),
                   ),
                 ),
+
+                const SizedBox(height: 24),
+
+                // Card de gestão → Gerenciar Escola
+                if (tipoPerfil == 'gestao' && schoolId != null)
+                  _buildManageSchoolCard(context, schoolId),
+
+                // Lista de alunos para responsáveis
+                if (uid != null && tipoPerfil == 'responsavel')
+                  StreamBuilder<List<DocumentSnapshot>>(
+                    stream: studentService.getStudentsForResponsible(uid),
+                    builder: (context, studentSnapshot) {
+                      if (studentSnapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (!studentSnapshot.hasData || studentSnapshot.data!.isEmpty) {
+                        return const Center(child: Text('Nenhum aluno vinculado.'));
+                      }
+                      final students = studentSnapshot.data!;
+                      return _buildStudentsList(students);
+                    },
+                  ),
               ],
             ),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildManageSchoolCard(BuildContext context, String schoolId) {
+    return Card(
+      elevation: 2,
+      child: ListTile(
+        leading: const Icon(Icons.school, color: Colors.blueAccent),
+        title: const Text('Gerenciar Escola'),
+        subtitle: const Text('Editar ou excluir os dados da sua escola'),
+        trailing: const Icon(Icons.arrow_forward_ios),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => SchoolDetailsPage(schoolId: schoolId),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildStudentsList(List<DocumentSnapshot> students) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Alunos Vinculados',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: students.length,
+          itemBuilder: (context, index) {
+            final studentData = students[index].data() as Map<String, dynamic>;
+            return Card(
+              child: ListTile(
+                title: Text(studentData['name'] ?? 'Nome não encontrado'),
+                subtitle: Text('Nascimento: ${studentData['birthDate'] ?? '...'}'),
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 
@@ -103,43 +181,4 @@ class ProfilePage extends StatelessWidget {
             const SizedBox(height: 8),
             _buildInfoRow("CPF:", userData['cpf'] ?? '...'),
             const SizedBox(height: 8),
-            _buildInfoRow("Data de Nascimento:", userData['dataNascimento'] ?? '...'),
-            const SizedBox(height: 8),
-            _buildInfoRow("Responsável por:", userData['responsavelPor'] ?? '...'),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontWeight: FontWeight.w500,
-              fontSize: 14,
-              color: Colors.black,
-            ),
-          ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.black,
-              ),
-              softWrap: true,
-              overflow: TextOverflow.visible,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+            _buildInfoRow("Data de Nascimento:", us_

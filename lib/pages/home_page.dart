@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../widgets/main_scaffold.dart';
+import 'add_student_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -32,9 +34,9 @@ class HomePage extends StatelessWidget {
         }
 
         final dados = snapshot.data!.data() as Map<String, dynamic>;
-
         final nomeUsuario = dados['name'] ?? 'Usuário';
         final tipoPerfil = dados['role'] ?? 'responsavel';
+        final isGestor = tipoPerfil == 'gestao';
 
         return MainScaffold(
           currentIndex: 2, // Home
@@ -81,6 +83,15 @@ class HomePage extends StatelessWidget {
                       _menuButton("Escola", Icons.school, () {}),
                       _menuButton("Turmas", Icons.class_, () {}),
                       _menuButton("Chat", Icons.chat, () {}),
+                      if (isGestor)
+                        _menuButton("Adicionar Aluno", Icons.person_add, () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const AddStudentPage(),
+                            ),
+                          );
+                        }),
                     ],
                   ),
                 )
