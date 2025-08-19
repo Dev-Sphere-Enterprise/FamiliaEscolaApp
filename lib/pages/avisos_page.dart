@@ -52,19 +52,32 @@ class AvisosPage extends StatelessWidget {
               return ListView(
                 children: snapshot.data!.docs.map((doc) {
                   final aviso = doc.data() as Map<String, dynamic>;
-                  final lido = (aviso['lidoPor'] as List?)?.contains(uid) ?? false;
+                  final lidoPor = List<String>.from(aviso['lidoPor'] ?? []);
+                  final jaLido = lidoPor.contains(uid);
 
                   return Card(
                     child: ListTile(
                       title: Text(aviso['titulo'] ?? ''),
-                      subtitle: Text(aviso['mensagem'] ?? ''),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(aviso['mensagem'] ?? ''),
+                          if (aviso['data'] != null)
+                            Text(
+                              (aviso['data'] as Timestamp).toDate().toString(),
+                              style: const TextStyle(fontSize: 12, color: Colors.grey),
+                            ),
+                        ],
+                      ),
                       trailing: role == 'responsavel'
                           ? IconButton(
                         icon: Icon(
-                          lido ? Icons.check_circle : Icons.mark_email_unread,
-                          color: lido ? Colors.green : Colors.red,
+                          jaLido ? Icons.check_circle : Icons.mark_email_unread,
+                          color: jaLido ? Colors.green : Colors.red,
                         ),
-                        onPressed: () {
+                        onPressed: jaLido
+                            ? null
+                            : () {
                           FirebaseFirestore.instance
                               .collection('avisos')
                               .doc(doc.id)
@@ -153,11 +166,13 @@ class AvisosPage extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
               if (isEdit && docId != null) {
+                // 🔄 Editar apenas titulo e mensagem, manter lidoPor
                 FirebaseFirestore.instance.collection('avisos').doc(docId).update({
                   'titulo': tituloCtrl.text,
                   'mensagem': mensagemCtrl.text,
                 });
               } else {
+                // ➕ Criar novo aviso
                 FirebaseFirestore.instance.collection('avisos').add({
                   'titulo': tituloCtrl.text,
                   'mensagem': mensagemCtrl.text,

@@ -27,25 +27,12 @@ class _AdicionarAvisoPageState extends State<AdicionarAvisoPage> {
     setState(() => _loading = true);
 
     try {
-      final usuariosSnapshot = await FirebaseFirestore.instance.collection('users').get();
-
-      final batch = FirebaseFirestore.instance.batch();
-      for (var userDoc in usuariosSnapshot.docs) {
-        final avisoRef = FirebaseFirestore.instance
-            .collection('avisosUsuarios')
-            .doc(userDoc.id)
-            .collection('itens')
-            .doc();
-
-        batch.set(avisoRef, {
-          'titulo': _tituloCtrl.text.trim(),
-          'mensagem': _mensagemCtrl.text.trim(),
-          'data': DateTime.now(),
-          'lido': false,
-        });
-      }
-
-      await batch.commit();
+      await FirebaseFirestore.instance.collection('avisos').add({
+        'titulo': _tituloCtrl.text.trim(),
+        'mensagem': _mensagemCtrl.text.trim(),
+        'data': DateTime.now(),
+        'lidoPor': [], // começa vazio, cada responsável vai marcar depois
+      });
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

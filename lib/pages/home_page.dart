@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../widgets/main_scaffold.dart';
 import 'add_student_page.dart';
+import 'avisos_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -18,7 +19,6 @@ class HomePage extends StatelessWidget {
       );
     }
 
-    // 🔄 Sempre puxa os dados do usuário logado no Firestore
     return StreamBuilder<DocumentSnapshot>(
       stream: FirebaseFirestore.instance
           .collection('users')
@@ -59,12 +59,13 @@ class HomePage extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
 
-                // 🔔 Quadro de Avisos puxado do Firestore
+                // 🔔 Quadro de Avisos (3 mais recentes)
                 Flexible(
                   child: StreamBuilder<QuerySnapshot>(
                     stream: FirebaseFirestore.instance
                         .collection('avisos')
-                        .orderBy('dataCriacao', descending: true)
+                        .orderBy('data', descending: true)
+                        .limit(3)
                         .snapshots(),
                     builder: (context, avisoSnapshot) {
                       if (avisoSnapshot.connectionState == ConnectionState.waiting) {
@@ -77,39 +78,81 @@ class HomePage extends StatelessWidget {
 
                       final avisos = avisoSnapshot.data!.docs;
 
-                      return ListView.builder(
-                        itemCount: avisos.length,
-                        itemBuilder: (context, index) {
-                          final aviso = avisos[index].data() as Map<String, dynamic>;
-                          final titulo = aviso['titulo'] ?? "Sem título";
-                          final mensagem = aviso['mensagem'] ?? "";
-                          final data = (aviso['dataCriacao'] as Timestamp?)?.toDate();
-
-                          return Card(
-                            margin: const EdgeInsets.symmetric(vertical: 8),
-                            child: ListTile(
-                              title: Text(
-                                titulo,
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(mensagem),
-                                  if (data != null)
-                                    Text(
-                                      "${data.day}/${data.month}/${data.year} ${data.hour}:${data.minute.toString().padLeft(2, '0')}",
-                                      style: const TextStyle(fontSize: 12, color: Colors.grey),
-                                    ),
-                                ],
+                      return Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200], // 🔹 fundo mais escuro
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "Quadro de Avisos",
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
-                          );
-                        },
+                            const SizedBox(height: 8),
+                            Expanded(
+                              child: ListView.builder(
+                                itemCount: avisos.length,
+                                itemBuilder: (context, index) {
+                                  final aviso = avisos[index].data() as Map<String, dynamic>;
+                                  final titulo = aviso['titulo'] ?? "Sem título";
+                                  final mensagem = aviso['mensagem'] ?? "";
+                                  final data = (aviso['data'] as Timestamp?)?.toDate();
+
+                                  return Card(
+                                    margin: const EdgeInsets.symmetric(vertical: 4),
+                                    elevation: 1, // leve destaque
+                                    child: ListTile(
+                                      title: Text(titulo),
+                                      subtitle: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            mensagem,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          if (data != null)
+                                            Text(
+                                              "${data.day}/${data.month}/${data.year}",
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey,
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const AvisosPage(),
+                                    ),
+                                  );
+                                },
+                                child: const Text("Ver todos"),
+                              ),
+                            ),
+                          ],
+                        ),
                       );
                     },
                   ),
                 ),
+
 
                 const SizedBox(height: 16),
 
