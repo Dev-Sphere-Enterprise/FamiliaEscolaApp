@@ -19,12 +19,10 @@ class AuthGate extends StatelessWidget {
           );
         }
 
-        // ❌ Usuário não logado → vai para Login
         if (!snapshot.hasData) {
           return const LoginPage();
         }
 
-        // ✅ Usuário logado → buscar dados no Firestore
         return StreamBuilder<DocumentSnapshot>(
           stream: FirebaseFirestore.instance
               .collection('users')
@@ -41,12 +39,12 @@ class AuthGate extends StatelessWidget {
               FirebaseAuth.instance.signOut();
               return const Scaffold(
                 body: Center(
-                    child: Text("Erro: dados do usuário não encontrados. Faça login novamente.")),
+                  child: Text("Erro: dados do usuário não encontrados. Faça login novamente."),
+                ),
               );
             }
 
             final userData = userSnapshot.data!.data() as Map<String, dynamic>;
-            final nome = userData['name'] ?? 'Usuário';
             final tipoPerfil = userData['role'] ?? 'responsavel';
 
             if (tipoPerfil == 'gestao') {
@@ -56,10 +54,8 @@ class AuthGate extends StatelessWidget {
               }
             }
 
-            return HomePage(
-              nomeUsuario: nome,
-              tipoPerfil: tipoPerfil,
-            );
+            // ✅ HomePage agora busca sozinha os dados do Firestore
+            return const HomePage();
           },
         );
       },

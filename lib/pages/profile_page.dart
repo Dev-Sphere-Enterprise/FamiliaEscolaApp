@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 import '../services/auth_service.dart';
 import '../services/student_service.dart';
@@ -16,17 +15,20 @@ class ProfilePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final authService = AuthService();
     final studentService = StudentService();
-    final uid = authService.currentUser?.uid;
+    final currentUser = authService.currentUser;
 
-    final userStream = authService.getUserStream();
-    if (userStream == null) {
+    if (currentUser == null) {
       return const Scaffold(
         body: Center(child: Text("Usuário não autenticado")),
       );
     }
 
+    // 🔄 Sempre puxa os dados do usuário logado no Firestore
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: userStream,
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUser.uid)
+          .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
@@ -79,23 +81,33 @@ class ProfilePage extends StatelessWidget {
 
                 const SizedBox(height: 24),
 
-                // Card de gestão → Gerenciar Escola
+                // Card da gestão → Gerenciar Escola
                 if (tipoPerfil == 'gestao' && schoolId != null)
                   _buildManageSchoolCard(context, schoolId),
 
-                // Lista de alunos para responsáveis
-                if (uid != null && tipoPerfil == 'responsavel')
-                  StreamBuilder<List<DocumentSnapshot>>(
-                    stream: studentService.getStudentsForResponsible(uid),
-                    builder: (context, studentSnapshot) {
-                      if (studentSnapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
+                // Lista de alunos → apenas para responsáveis
+                if (tipoPerfil == 'responsavel')
+                  Builder(
+                    builder: (context) {
+                      final cpf = userData['cpf'];
+                      if (cpf == null || cpf.toString().isEmpty) {
+                        return const Center(
+                          child: Text("CPF não encontrado para este usuário."),
+                        );
                       }
-                      if (!studentSnapshot.hasData || studentSnapshot.data!.isEmpty) {
-                        return const Center(child: Text('Nenhum aluno vinculado.'));
-                      }
-                      final students = studentSnapshot.data!;
-                      return _buildStudentsList(students);
+                      return StreamBuilder<List<DocumentSnapshot>>(
+                        stream: studentService.getStudentsForResponsibleByCpf(cpf),
+                        builder: (context, studentSnapshot) {
+                          if (studentSnapshot.connectionState == ConnectionState.waiting) {
+                            return const Center(child: CircularProgressIndicator());
+                          }
+                          if (!studentSnapshot.hasData || studentSnapshot.data!.isEmpty) {
+                            return const Center(child: Text('Nenhum aluno vinculado.'));
+                          }
+                          final students = studentSnapshot.data!;
+                          return _buildStudentsList(students);
+                        },
+                      );
                     },
                   ),
               ],
@@ -181,4 +193,41 @@ class ProfilePage extends StatelessWidget {
             const SizedBox(height: 8),
             _buildInfoRow("CPF:", userData['cpf'] ?? '...'),
             const SizedBox(height: 8),
-            _buildInfoRow("Data de Nascimento:", us_
+            _buildInfoRow("Data de Nascimento:", userData['dataNascimento'] ?? '...'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontWeight: FontWeight.w500,
+              fontSize: 14,
+              color: Colors.black,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.black,
+              ),
+              softWrap: true,
+              overflow: TextOverflow.visible,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

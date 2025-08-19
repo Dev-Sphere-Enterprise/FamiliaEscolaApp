@@ -10,16 +10,20 @@ class HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final currentUser = FirebaseAuth.instance.currentUser;
 
-    if (uid == null) {
+    if (currentUser == null) {
       return const Scaffold(
         body: Center(child: Text("Usuário não autenticado")),
       );
     }
 
+    // 🔄 Sempre puxa os dados do usuário logado no Firestore
     return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance.collection('users').doc(uid).snapshots(),
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUser.uid)
+          .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
@@ -55,29 +59,65 @@ class HomePage extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
 
-                // 🔔 Quadro de Avisos
-                Expanded(
-                  child: Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: Colors.amber[100],
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Center(
-                      child: Text(
-                        "Quadro de Avisos",
-                        style: TextStyle(fontSize: 16),
-                      ),
-                    ),
+                // 🔔 Quadro de Avisos puxado do Firestore
+                Flexible(
+                  child: StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('avisos')
+                        .orderBy('dataCriacao', descending: true)
+                        .snapshots(),
+                    builder: (context, avisoSnapshot) {
+                      if (avisoSnapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+
+                      if (!avisoSnapshot.hasData || avisoSnapshot.data!.docs.isEmpty) {
+                        return const Center(child: Text("Nenhum aviso disponível"));
+                      }
+
+                      final avisos = avisoSnapshot.data!.docs;
+
+                      return ListView.builder(
+                        itemCount: avisos.length,
+                        itemBuilder: (context, index) {
+                          final aviso = avisos[index].data() as Map<String, dynamic>;
+                          final titulo = aviso['titulo'] ?? "Sem título";
+                          final mensagem = aviso['mensagem'] ?? "";
+                          final data = (aviso['dataCriacao'] as Timestamp?)?.toDate();
+
+                          return Card(
+                            margin: const EdgeInsets.symmetric(vertical: 8),
+                            child: ListTile(
+                              title: Text(
+                                titulo,
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(mensagem),
+                                  if (data != null)
+                                    Text(
+                                      "${data.day}/${data.month}/${data.year} ${data.hour}:${data.minute.toString().padLeft(2, '0')}",
+                                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
                   ),
                 ),
+
                 const SizedBox(height: 16),
 
                 // 🔘 Botões de Atalho
                 Center(
                   child: Wrap(
-                    spacing: 50,
-                    runSpacing: 50,
+                    spacing: 35,
+                    runSpacing: 25,
                     children: [
                       _menuButton("Alunos", Icons.people, () {}),
                       _menuButton("Escola", Icons.school, () {}),
