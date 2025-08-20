@@ -1,3 +1,4 @@
+import 'package:FamiliaEscolaApp/pages/alunos_page.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -216,7 +217,10 @@ class HomePage extends StatelessWidget {
                     spacing: 35,
                     runSpacing: 25,
                     children: [
-                      _menuButton("Alunos", Icons.people, () {}),
+                      _menuButton("Alunos", Icons.people, () {
+                        Navigator.push(context, MaterialPageRoute(
+                            builder: (context) => const AlunosPage()));
+                      }),
                       _menuButton("Escola", Icons.school, () {}),
                       _menuButton("Turmas", Icons.class_, () {}),
                       _menuButton("Chat", Icons.chat, () {}),
