@@ -52,68 +52,84 @@ class AvisosPage extends StatelessWidget {
               return ListView(
                 children: snapshot.data!.docs.map((doc) {
                   final aviso = doc.data() as Map<String, dynamic>;
-                  final lidoPor = List<String>.from(aviso['lidoPor'] ?? []);
-                  final jaLido = lidoPor.contains(uid);
 
-                  return Card(
-                    child: ListTile(
-                      title: Text(aviso['titulo'] ?? ''),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(aviso['mensagem'] ?? ''),
-                          if (aviso['data'] != null)
-                            Text(
-                              (aviso['data'] as Timestamp).toDate().toString(),
-                              style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  // 🔎 Verificação se este aviso já foi lido pelo usuário
+                  return StreamBuilder<DocumentSnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('avisosUsuarios')
+                        .doc(uid)
+                        .collection('itens')
+                        .doc(doc.id)
+                        .snapshots(),
+                    builder: (context, lidoSnap) {
+                      final jaLido = lidoSnap.hasData &&
+                          lidoSnap.data != null &&
+                          (lidoSnap.data!.data() as Map<String, dynamic>?)?['lido'] == true;
+
+                      return Card(
+                        child: ListTile(
+                          title: Text(aviso['titulo'] ?? ''),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(aviso['mensagem'] ?? ''),
+                              if (aviso['data'] != null)
+                                Text(
+                                  (aviso['data'] as Timestamp).toDate().toString(),
+                                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                ),
+                            ],
+                          ),
+                          trailing: role == 'responsavel'
+                              ? IconButton(
+                            icon: Icon(
+                              jaLido ? Icons.check_circle : Icons.mark_email_unread,
+                              color: jaLido ? Colors.green : Colors.red,
                             ),
-                        ],
-                      ),
-                      trailing: role == 'responsavel'
-                          ? IconButton(
-                        icon: Icon(
-                          jaLido ? Icons.check_circle : Icons.mark_email_unread,
-                          color: jaLido ? Colors.green : Colors.red,
+                            onPressed: jaLido
+                                ? null
+                                : () async {
+                              await FirebaseFirestore.instance
+                                  .collection('avisosUsuarios')
+                                  .doc(uid)
+                                  .collection('itens')
+                                  .doc(doc.id)
+                                  .set({
+                                'lido': true,
+                                'dataLeitura': FieldValue.serverTimestamp(),
+                              }, SetOptions(merge: true));
+                            },
+                          )
+                              : PopupMenuButton<String>(
+                            onSelected: (value) {
+                              if (value == 'edit') {
+                                _showNovoAvisoDialog(
+                                  context,
+                                  isEdit: true,
+                                  docId: doc.id,
+                                  dados: aviso,
+                                );
+                              } else if (value == 'delete') {
+                                FirebaseFirestore.instance
+                                    .collection('avisos')
+                                    .doc(doc.id)
+                                    .delete();
+                              }
+                            },
+                            itemBuilder: (context) => <PopupMenuEntry<String>>[
+                              const PopupMenuItem(
+                                value: 'edit',
+                                child: Text("Editar"),
+                              ),
+                              const PopupMenuItem(
+                                value: 'delete',
+                                child: Text("Excluir"),
+                              ),
+                            ],
+                          ),
                         ),
-                        onPressed: jaLido
-                            ? null
-                            : () {
-                          FirebaseFirestore.instance
-                              .collection('avisos')
-                              .doc(doc.id)
-                              .update({
-                            'lidoPor': FieldValue.arrayUnion([uid])
-                          });
-                        },
-                      )
-                          : PopupMenuButton<String>(
-                        onSelected: (value) {
-                          if (value == 'edit') {
-                            _showNovoAvisoDialog(
-                              context,
-                              isEdit: true,
-                              docId: doc.id,
-                              dados: aviso,
-                            );
-                          } else if (value == 'delete') {
-                            FirebaseFirestore.instance
-                                .collection('avisos')
-                                .doc(doc.id)
-                                .delete();
-                          }
-                        },
-                        itemBuilder: (context) => <PopupMenuEntry<String>>[
-                          const PopupMenuItem(
-                            value: 'edit',
-                            child: Text("Editar"),
-                          ),
-                          const PopupMenuItem(
-                            value: 'delete',
-                            child: Text("Excluir"),
-                          ),
-                        ],
-                      ),
-                    ),
+                      );
+                    },
                   );
                 }).toList(),
               );
@@ -166,18 +182,15 @@ class AvisosPage extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
               if (isEdit && docId != null) {
-                // 🔄 Editar apenas titulo e mensagem, manter lidoPor
                 FirebaseFirestore.instance.collection('avisos').doc(docId).update({
                   'titulo': tituloCtrl.text,
                   'mensagem': mensagemCtrl.text,
                 });
               } else {
-                // ➕ Criar novo aviso
                 FirebaseFirestore.instance.collection('avisos').add({
                   'titulo': tituloCtrl.text,
                   'mensagem': mensagemCtrl.text,
                   'data': DateTime.now(),
-                  'lidoPor': [],
                 });
               }
               Navigator.pop(context);

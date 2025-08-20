@@ -11,13 +11,18 @@ class HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final uid = FirebaseAuth.instance.currentUser!.uid;
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final uid = user.uid;
 
     return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .snapshots(),
+      stream: FirebaseFirestore.instance.collection('users').doc(uid).snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
@@ -26,8 +31,9 @@ class HomePage extends StatelessWidget {
         }
 
         if (!snapshot.hasData || !snapshot.data!.exists) {
+          FirebaseAuth.instance.signOut();
           return const Scaffold(
-            body: Center(child: Text("Dados do usuário não encontrados")),
+            body: Center(child: CircularProgressIndicator()),
           );
         }
 
@@ -37,7 +43,7 @@ class HomePage extends StatelessWidget {
         final isGestor = tipoPerfil == 'gestao';
 
         return MainScaffold(
-          currentIndex: 2, // Home
+          currentIndex: 2,
           body: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -62,151 +68,141 @@ class HomePage extends StatelessWidget {
                         .limit(3)
                         .snapshots(),
                     builder: (context, avisoSnapshot) {
-                      if (avisoSnapshot.connectionState ==
-                          ConnectionState.waiting) {
-                        return const Center(
-                            child: CircularProgressIndicator());
+                      if (avisoSnapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
                       }
 
-                      if (!avisoSnapshot.hasData ||
-                          avisoSnapshot.data!.docs.isEmpty) {
-                        return const Center(
-                            child: Text("Nenhum aviso disponível"));
+                      if (!avisoSnapshot.hasData || avisoSnapshot.data!.docs.isEmpty) {
+                        return const Center(child: Text("Nenhum aviso disponível"));
                       }
 
                       final avisos = avisoSnapshot.data!.docs;
 
-                      // 🔎 contar não lidos (só se for responsável)
-                      int naoLidos = 0;
-                      if (tipoPerfil == 'responsavel') {
-                        for (var aviso in avisos) {
-                          final data = aviso.data() as Map<String, dynamic>;
-                          final lidoPor =
-                          List<String>.from(data['lidoPor'] ?? []);
-                          if (!lidoPor.contains(uid)) {
-                            naoLidos++;
+                      return StreamBuilder<QuerySnapshot>(
+                        stream: FirebaseFirestore.instance
+                            .collection('avisosUsuarios')
+                            .doc(uid)
+                            .collection('itens')
+                            .snapshots(),
+                        builder: (context, lidosSnapshot) {
+                          if (lidosSnapshot.connectionState == ConnectionState.waiting) {
+                            return const Center(child: CircularProgressIndicator());
                           }
-                        }
-                      }
 
-                      return Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300], // fundo mais escuro
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // 🔴 título + badge (só para responsável)
-                            Row(
-                              mainAxisAlignment:
-                              MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text(
-                                  "Quadro de Avisos",
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                if (tipoPerfil == 'responsavel' &&
-                                    naoLidos > 0)
-                                  Text(
-                                    "🔴 $naoLidos novos",
-                                    style: const TextStyle(
-                                      color: Colors.red,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                              ],
+                          final lidosDocs = {
+                            for (var d in (lidosSnapshot.data?.docs ?? [])) d.id: d
+                          };
+
+                          // 🔎 contar não lidos
+                          int naoLidos = 0;
+                          if (tipoPerfil == 'responsavel') {
+                            for (var aviso in avisos) {
+                              final jaLido = lidosDocs[aviso.id]?.get('lido') == true;
+                              if (!jaLido) naoLidos++;
+                            }
+                          }
+
+                          return Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[300],
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                            const SizedBox(height: 8),
-
-                            // lista resumida de avisos
-                            Expanded(
-                              child: ListView.builder(
-                                itemCount: avisos.length,
-                                itemBuilder: (context, index) {
-                                  final aviso =
-                                  avisos[index].data() as Map<String, dynamic>;
-                                  final titulo =
-                                      aviso['titulo'] ?? "Sem título";
-                                  final mensagem =
-                                      aviso['mensagem'] ?? "";
-                                  final data =
-                                  (aviso['data'] as Timestamp?)
-                                      ?.toDate();
-
-                                  // só marca cores/lido se for responsável
-                                  bool jaLido = true;
-                                  if (tipoPerfil == 'responsavel') {
-                                    final lidoPor =
-                                    List<String>.from(aviso['lidoPor'] ?? []);
-                                    jaLido = lidoPor.contains(uid);
-                                  }
-
-                                  return Card(
-                                    color: (tipoPerfil == 'responsavel')
-                                        ? (jaLido
-                                        ? Colors.white
-                                        : Colors.amber[100])
-                                        : Colors.white,
-                                    margin: const EdgeInsets.symmetric(
-                                        vertical: 4),
-                                    child: ListTile(
-                                      title: Text(
-                                        titulo,
-                                        style: TextStyle(
-                                          fontWeight: (tipoPerfil ==
-                                              'responsavel' &&
-                                              !jaLido)
-                                              ? FontWeight.bold
-                                              : FontWeight.normal,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // 🔴 título + badge
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text(
+                                      "Quadro de Avisos",
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    if (tipoPerfil == 'responsavel' && naoLidos > 0)
+                                      Text(
+                                        "🔴 $naoLidos novos",
+                                        style: const TextStyle(
+                                          color: Colors.red,
+                                          fontWeight: FontWeight.bold,
                                         ),
                                       ),
-                                      subtitle: Column(
-                                        crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            mensagem,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          if (data != null)
-                                            Text(
-                                              "${data.day}/${data.month}/${data.year}",
-                                              style: const TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.grey,
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
 
-                            // botão ver todos
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: TextButton(
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => const AvisosPage(),
-                                    ),
-                                  );
-                                },
-                                child: const Text("Ver todos"),
-                              ),
+                                // lista resumida de avisos
+                                Expanded(
+                                  child: ListView.builder(
+                                    itemCount: avisos.length,
+                                    itemBuilder: (context, index) {
+                                      final aviso = avisos[index].data() as Map<String, dynamic>;
+                                      final titulo = aviso['titulo'] ?? "Sem título";
+                                      final mensagem = aviso['mensagem'] ?? "";
+                                      final data = (aviso['data'] as Timestamp?)?.toDate();
+
+                                      final jaLido = lidosDocs[avisos[index].id]?.get('lido') == true;
+
+                                      return Card(
+                                        color: (tipoPerfil == 'responsavel')
+                                            ? (jaLido ? Colors.white : Colors.amber[100])
+                                            : Colors.white,
+                                        margin: const EdgeInsets.symmetric(vertical: 4),
+                                        child: ListTile(
+                                          title: Text(
+                                            titulo,
+                                            style: TextStyle(
+                                              fontWeight: (tipoPerfil == 'responsavel' && !jaLido)
+                                                  ? FontWeight.bold
+                                                  : FontWeight.normal,
+                                            ),
+                                          ),
+                                          subtitle: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                mensagem,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                              if (data != null)
+                                                Text(
+                                                  "${data.day}/${data.month}/${data.year}",
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                    color: Colors.grey,
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+
+                                // botão ver todos
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton(
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => const AvisosPage(),
+                                        ),
+                                      );
+                                    },
+                                    child: const Text("Ver todos"),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          );
+                        },
                       );
                     },
                   ),
@@ -229,8 +225,7 @@ class HomePage extends StatelessWidget {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) =>
-                              const AddStudentPage(),
+                              builder: (context) => const AddStudentPage(),
                             ),
                           );
                         }),
