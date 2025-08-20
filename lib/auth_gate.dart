@@ -1,8 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'pages/home_page.dart';
 import 'pages/login_page.dart';
+import 'pages/home_page.dart';
 import 'pages/add_school_page.dart';
 
 class AuthGate extends StatelessWidget {
@@ -19,10 +19,12 @@ class AuthGate extends StatelessWidget {
           );
         }
 
+        // 🔑 Usuário deslogado → vai pro LoginPage
         if (!snapshot.hasData) {
           return const LoginPage();
         }
 
+        // 🔑 Usuário logado → busca dados no Firestore
         return StreamBuilder<DocumentSnapshot>(
           stream: FirebaseFirestore.instance
               .collection('users')
@@ -35,18 +37,15 @@ class AuthGate extends StatelessWidget {
               );
             }
 
+            // ⚠️ Caso não encontre dados → volta pro LoginPage
             if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
-              FirebaseAuth.instance.signOut();
-              return const Scaffold(
-                body: Center(
-                  child: Text("Erro: dados do usuário não encontrados. Faça login novamente."),
-                ),
-              );
+              return const LoginPage();
             }
 
             final userData = userSnapshot.data!.data() as Map<String, dynamic>;
             final tipoPerfil = userData['role'] ?? 'responsavel';
 
+            // Se for gestor sem escola vinculada → AddSchoolPage
             if (tipoPerfil == 'gestao') {
               final idEscola = userData['id_escola'];
               if (idEscola == null || idEscola.toString().isEmpty) {
@@ -54,7 +53,7 @@ class AuthGate extends StatelessWidget {
               }
             }
 
-            // ✅ HomePage agora busca sozinha os dados do Firestore
+            // Caso contrário → HomePage
             return const HomePage();
           },
         );
