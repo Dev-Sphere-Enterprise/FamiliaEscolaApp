@@ -9,7 +9,7 @@ class SchoolDetailsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final SchoolService schoolService = SchoolService();
+    final schoolService = SchoolService();
 
     return Scaffold(
       appBar: AppBar(
@@ -32,15 +32,15 @@ class SchoolDetailsPage extends StatelessWidget {
             return const Center(child: Text('Escola não encontrada.'));
           }
 
-          final schoolData = snapshot.data!.data()!;
+          final schoolData = snapshot.data!.data() ?? {};
 
           return Padding(
             padding: const EdgeInsets.all(16.0),
             child: ListView(
               children: [
-                _buildInfoCard("Nome", schoolData['nome'] ?? '...'),
-                _buildInfoCard("Tipo", schoolData['tipo'] ?? '...'),
-                _buildInfoCard("Outras Informações", schoolData['info'] ?? '...'),
+                _buildInfoCard("Nome", schoolData['nome'] ?? 'Não informado'),
+                _buildInfoCard("Tipo", schoolData['tipo'] ?? 'Não informado'),
+                _buildInfoCard("Outras Informações", schoolData['info'] ?? 'Nenhuma'),
               ],
             ),
           );
@@ -48,14 +48,22 @@ class SchoolDetailsPage extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          final schoolDoc = await schoolService.getSchoolData(schoolId);
-          if (context.mounted) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => EditSchoolPage(schoolDocument: schoolDoc),
-              ),
-            );
+          try {
+            final schoolDoc = await schoolService.getSchoolData(schoolId);
+            if (context.mounted) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => EditSchoolPage(schoolDocument: schoolDoc),
+                ),
+              );
+            }
+          } catch (e) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text("Erro ao carregar dados da escola: $e")),
+              );
+            }
           }
         },
         child: const Icon(Icons.edit),
@@ -66,9 +74,17 @@ class SchoolDetailsPage extends StatelessWidget {
   Widget _buildInfoCard(String title, String subtitle) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 2,
       child: ListTile(
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(subtitle, style: const TextStyle(fontSize: 16)),
+        title: Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: const TextStyle(fontSize: 15, color: Colors.black87),
+        ),
       ),
     );
   }
@@ -80,14 +96,16 @@ class SchoolDetailsPage extends StatelessWidget {
         return AlertDialog(
           title: const Text('Confirmar Exclusão'),
           content: const Text(
-            'Tem certeza de que deseja excluir esta escola? Esta ação não pode ser desfeita.',
+            'Tem certeza de que deseja excluir esta escola? '
+                'Esta ação não pode ser desfeita.',
           ),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
               child: const Text('Cancelar'),
             ),
-            TextButton(
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
               onPressed: () async {
                 try {
                   await schoolService.deleteSchool(schoolId);
@@ -103,7 +121,7 @@ class SchoolDetailsPage extends StatelessWidget {
                   }
                 }
               },
-              child: const Text('Excluir', style: TextStyle(color: Colors.red)),
+              child: const Text('Excluir'),
             ),
           ],
         );
