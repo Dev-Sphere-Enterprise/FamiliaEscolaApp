@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 import 'package:FamiliaEscolaApp/pages/home_page.dart';
 import 'package:FamiliaEscolaApp/pages/avisos_page.dart';
 import 'package:FamiliaEscolaApp/pages/mensagens_page.dart';
@@ -33,9 +33,7 @@ class MainScaffold extends StatelessWidget {
       case 2: // Home
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder: (_) => HomePage(),
-          ),
+          MaterialPageRoute(builder: (_) => const HomePage()),
         );
         break;
       case 3: // Mensagens

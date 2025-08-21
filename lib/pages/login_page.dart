@@ -33,7 +33,10 @@ class _LoginPageState extends State<LoginPage> {
         email: _emailCtrl.text.trim(),
         password: _passCtrl.text,
       );
-      // authStateChanges do AuthGate cuidará da navegação
+
+      // 🔑 A navegação após login será tratada no AuthGate
+      // Lá você verifica se o usuário já tem escolaId definido
+      // Se não tiver, redireciona para escolher/cadastrar escola
     } on FirebaseAuthException catch (e) {
       final message = _mapFirebaseError(e);
       _showSnack(message, isError: true);
@@ -233,7 +236,8 @@ class _LoginPageState extends State<LoginPage> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                                builder: (_) => const RegisterPage()),
+                              builder: (_) => const RegisterPage(),
+                            ),
                           );
                         },
                         style: OutlinedButton.styleFrom(

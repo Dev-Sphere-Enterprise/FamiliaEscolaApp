@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/school_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AddSchoolPage extends StatefulWidget {
   const AddSchoolPage({super.key});
@@ -15,7 +16,6 @@ class _AddSchoolPageState extends State<AddSchoolPage> {
   final _otherDataCtrl = TextEditingController();
 
   bool _loading = false;
-  final SchoolService _schoolService = SchoolService();
 
   @override
   void dispose() {
@@ -31,13 +31,31 @@ class _AddSchoolPageState extends State<AddSchoolPage> {
     setState(() => _loading = true);
 
     try {
-      await _schoolService.addSchool(
-        schoolName: _schoolNameCtrl.text.trim(),
-        schoolType: _schoolTypeCtrl.text.trim(),
-        otherData: _otherDataCtrl.text.trim(),
-      );
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) {
+        throw Exception("Usuário não autenticado");
+      }
 
-      // A navegação será tratada pelo AuthGate, que irá reavaliar o estado
+      // 1️⃣ Criar a escola
+      final escolaRef =
+      await FirebaseFirestore.instance.collection("escolas").add({
+        "nome": _schoolNameCtrl.text.trim(),
+        "tipo": _schoolTypeCtrl.text.trim(),
+        "info": _otherDataCtrl.text.trim(),
+        "createdAt": FieldValue.serverTimestamp(),
+      });
+
+      // 2️⃣ Atualizar o usuário logado como gestor dessa escola
+      await FirebaseFirestore.instance.collection("users").doc(uid).update({
+        "escolaId": escolaRef.id,
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Escola cadastrada com sucesso!")),
+        );
+        Navigator.pop(context); // volta para o fluxo normal
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -45,9 +63,7 @@ class _AddSchoolPageState extends State<AddSchoolPage> {
         );
       }
     } finally {
-      if (mounted) {
-        setState(() => _loading = false);
-      }
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -82,23 +98,28 @@ class _AddSchoolPageState extends State<AddSchoolPage> {
                 TextFormField(
                   controller: _schoolNameCtrl,
                   decoration: const InputDecoration(labelText: 'Nome da Escola'),
-                  validator: (value) => value!.isEmpty ? 'Campo obrigatório' : null,
+                  validator: (value) =>
+                  value!.isEmpty ? 'Campo obrigatório' : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _schoolTypeCtrl,
-                  decoration: const InputDecoration(labelText: 'Tipo (Ex: Particular, Pública)'),
-                  validator: (value) => value!.isEmpty ? 'Campo obrigatório' : null,
+                  decoration: const InputDecoration(
+                      labelText: 'Tipo (Ex: Particular, Pública)'),
+                  validator: (value) =>
+                  value!.isEmpty ? 'Campo obrigatório' : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _otherDataCtrl,
-                  decoration: const InputDecoration(labelText: 'Outras Informações (Endereço, etc.)'),
+                  decoration: const InputDecoration(
+                      labelText: 'Outras Informações (Endereço, etc.)'),
                 ),
                 const SizedBox(height: 32),
                 ElevatedButton(
                   onPressed: _loading ? null : _addSchool,
-                  style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+                  style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16)),
                   child: _loading
                       ? const CircularProgressIndicator(color: Colors.white)
                       : const Text('Salvar e Continuar'),

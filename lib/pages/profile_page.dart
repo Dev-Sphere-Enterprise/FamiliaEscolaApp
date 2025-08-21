@@ -23,7 +23,6 @@ class ProfilePage extends StatelessWidget {
       );
     }
 
-    // 🔄 Sempre puxa os dados do usuário logado no Firestore
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       stream: FirebaseFirestore.instance
           .collection('users')
@@ -44,10 +43,10 @@ class ProfilePage extends StatelessWidget {
 
         final userData = snapshot.data!.data()!;
         final tipoPerfil = userData['role'] ?? 'responsavel';
-        final schoolId = userData['id_escola'];
+        final schoolId = userData['escolaId'];
 
         return MainScaffold(
-          currentIndex: 4, // Perfil ativo
+          currentIndex: 4,
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -64,7 +63,7 @@ class ProfilePage extends StatelessWidget {
                 _buildInfoCard(userData),
                 const SizedBox(height: 24),
 
-                // Botão Editar Perfil
+                // Editar Perfil
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
@@ -81,12 +80,12 @@ class ProfilePage extends StatelessWidget {
 
                 const SizedBox(height: 24),
 
-                // Card da gestão → Gerenciar Escola
+                // Gestão → Gerenciar Escola
                 if (tipoPerfil == 'gestao' && schoolId != null)
                   _buildManageSchoolCard(context, schoolId),
 
-                // Lista de alunos → apenas para responsáveis
-                if (tipoPerfil == 'responsavel')
+                // Responsável → Listar alunos
+                if (tipoPerfil == 'responsavel' && schoolId != null)
                   Builder(
                     builder: (context) {
                       final cpf = userData['cpf'];
@@ -96,7 +95,7 @@ class ProfilePage extends StatelessWidget {
                         );
                       }
                       return StreamBuilder<List<DocumentSnapshot>>(
-                        stream: studentService.getStudentsForResponsibleByCpf(cpf),
+                        stream: studentService.getStudentsForResponsibleByCpf(schoolId, cpf),
                         builder: (context, studentSnapshot) {
                           if (studentSnapshot.connectionState == ConnectionState.waiting) {
                             return const Center(child: CircularProgressIndicator());
@@ -155,8 +154,8 @@ class ProfilePage extends StatelessWidget {
             final studentData = students[index].data() as Map<String, dynamic>;
             return Card(
               child: ListTile(
-                title: Text(studentData['name'] ?? 'Nome não encontrado'),
-                subtitle: Text('Nascimento: ${studentData['birthDate'] ?? '...'}'),
+                title: Text(studentData['nome'] ?? 'Nome não encontrado'),
+                subtitle: Text('Nascimento: ${studentData['dataNascimento'] ?? '...'}'),
               ),
             );
           },
@@ -189,11 +188,11 @@ class ProfilePage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildInfoRow("Nome:", userData['name'] ?? '...'),
+            _buildInfoRow("Nome:", userData['nome'] ?? '...'),
             const SizedBox(height: 8),
             _buildInfoRow("CPF:", userData['cpf'] ?? '...'),
             const SizedBox(height: 8),
-            _buildInfoRow("Data de Nascimento:", userData['dataNascimento'] ?? '...'),
+            _buildInfoRow("E-mail:", userData['email'] ?? '...'),
           ],
         ),
       ),

@@ -54,7 +54,7 @@ class _EditSchoolPageState extends State<EditSchoolPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Escola atualizada com sucesso!')),
         );
-        Navigator.pop(context); // Volta para a tela de detalhes
+        Navigator.pop(context); // Volta para tela anterior
       }
     } catch (e) {
       if (mounted) {
@@ -81,13 +81,13 @@ class _EditSchoolPageState extends State<EditSchoolPage> {
               TextFormField(
                 controller: _schoolNameCtrl,
                 decoration: const InputDecoration(labelText: 'Nome da Escola'),
-                validator: (value) => value!.isEmpty ? 'Campo obrigatório' : null,
+                validator: (v) => v!.isEmpty ? 'Campo obrigatório' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _schoolTypeCtrl,
-                decoration: const InputDecoration(labelText: 'Tipo (Ex: Particular, Pública)'),
-                validator: (value) => value!.isEmpty ? 'Campo obrigatório' : null,
+                decoration: const InputDecoration(labelText: 'Tipo (Ex: Pública, Particular)'),
+                validator: (v) => v!.isEmpty ? 'Campo obrigatório' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -98,7 +98,7 @@ class _EditSchoolPageState extends State<EditSchoolPage> {
               ElevatedButton(
                 onPressed: _loading ? null : _updateSchool,
                 child: _loading
-                    ? const CircularProgressIndicator()
+                    ? const CircularProgressIndicator(color: Colors.white)
                     : const Text('Salvar Alterações'),
               ),
             ],

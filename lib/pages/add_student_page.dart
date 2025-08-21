@@ -1,4 +1,5 @@
-import 'package:FamiliaEscolaApp/services/student_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class AddStudentPage extends StatefulWidget {
@@ -11,19 +12,18 @@ class AddStudentPage extends StatefulWidget {
 class _AddStudentPageState extends State<AddStudentPage> {
   final _formKey = GlobalKey<FormState>();
   final _studentNameCtrl = TextEditingController();
+  final _studentBirthDateCtrl = TextEditingController();
   final _responsibleNameCtrl = TextEditingController();
   final _responsibleCpfCtrl = TextEditingController();
-  final _studentBirthDateCtrl = TextEditingController();
 
   bool _loading = false;
-  final StudentService _studentService = StudentService();
 
   @override
   void dispose() {
     _studentNameCtrl.dispose();
+    _studentBirthDateCtrl.dispose();
     _responsibleNameCtrl.dispose();
     _responsibleCpfCtrl.dispose();
-    _studentBirthDateCtrl.dispose();
     super.dispose();
   }
 
@@ -33,29 +33,38 @@ class _AddStudentPageState extends State<AddStudentPage> {
     setState(() => _loading = true);
 
     try {
-      await _studentService.addStudent(
-        studentName: _studentNameCtrl.text.trim(),
-        studentBirthDate: _studentBirthDateCtrl.text.trim(),
-        responsibleName: _responsibleNameCtrl.text.trim(),
-        responsibleCpf: _responsibleCpfCtrl.text.trim(),
-      );
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) throw Exception("Usuário não autenticado");
+
+      // pega a escola do gestor logado
+      final userDoc = await FirebaseFirestore.instance.collection("users").doc(uid).get();
+      final escolaId = userDoc.data()?["escolaId"];
+      if (escolaId == null) throw Exception("Gestor não vinculado a nenhuma escola");
+
+      // cria aluno na coleção RAIZ "students"
+      final alunoRef = await FirebaseFirestore.instance.collection("students").add({
+        "nome": _studentNameCtrl.text.trim(),
+        "dataNascimento": _studentBirthDateCtrl.text.trim(),
+        "responsibleName": _responsibleNameCtrl.text.trim(),
+        "responsibleCpf": _responsibleCpfCtrl.text.trim(),
+        "escolaId": escolaId, // 🔗 vínculo com a escola
+        "createdAt": FieldValue.serverTimestamp(),
+      });
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Aluno adicionado com sucesso!')),
+          const SnackBar(content: Text("Aluno adicionado com sucesso!")),
         );
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao adicionar aluno: $e')),
+          SnackBar(content: Text("Erro ao adicionar aluno: $e")),
         );
       }
     } finally {
-      if (mounted) {
-        setState(() => _loading = false);
-      }
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -63,7 +72,7 @@ class _AddStudentPageState extends State<AddStudentPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Adicionar Aluno'),
+        title: const Text("Adicionar Aluno"),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -74,53 +83,33 @@ class _AddStudentPageState extends State<AddStudentPage> {
             children: [
               TextFormField(
                 controller: _studentNameCtrl,
-                decoration: const InputDecoration(labelText: 'Nome do Aluno'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Por favor, insira o nome do aluno';
-                  }
-                  return null;
-                },
+                decoration: const InputDecoration(labelText: "Nome do Aluno"),
+                validator: (v) => v == null || v.isEmpty ? "Informe o nome do aluno" : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _studentBirthDateCtrl,
-                decoration: const InputDecoration(labelText: 'Data de Nascimento do Aluno'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Por favor, insira a data de nascimento do aluno';
-                  }
-                  return null;
-                },
+                decoration: const InputDecoration(labelText: "Data de Nascimento"),
+                validator: (v) => v == null || v.isEmpty ? "Informe a data de nascimento" : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _responsibleNameCtrl,
-                decoration: const InputDecoration(labelText: 'Nome do Responsável'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Por favor, insira o nome do responsável';
-                  }
-                  return null;
-                },
+                decoration: const InputDecoration(labelText: "Nome do Responsável"),
+                validator: (v) => v == null || v.isEmpty ? "Informe o nome do responsável" : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _responsibleCpfCtrl,
-                decoration: const InputDecoration(labelText: 'CPF do Responsável'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Por favor, insira o CPF do responsável';
-                  }
-                  return null;
-                },
+                decoration: const InputDecoration(labelText: "CPF do Responsável"),
+                validator: (v) => v == null || v.isEmpty ? "Informe o CPF do responsável" : null,
               ),
               const SizedBox(height: 32),
               ElevatedButton(
                 onPressed: _loading ? null : _addStudent,
                 child: _loading
-                    ? const CircularProgressIndicator()
-                    : const Text('Adicionar Aluno'),
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text("Adicionar Aluno"),
               ),
             ],
           ),

@@ -5,6 +5,7 @@ class SchoolService {
   final _db = FirebaseFirestore.instance;
   final _auth = FirebaseAuth.instance;
 
+  // ➕ Adicionar escola (apenas gestores podem criar)
   Future<void> addSchool({
     required String schoolName,
     required String schoolType,
@@ -15,30 +16,32 @@ class SchoolService {
       throw Exception('Usuário não autenticado.');
     }
 
+    // Cria a escola
     final schoolRef = await _db.collection('escolas').add({
       'nome': schoolName,
       'tipo': schoolType,
-      'outros_dados': otherData,
+      'info': otherData,
       'gestorId': gestorId,
       'createdAt': FieldValue.serverTimestamp(),
     });
 
+    // Vincula gestor à escola criada
     await _db.collection('users').doc(gestorId).update({
-      'id_escola': schoolRef.id,
+      'escolaId': schoolRef.id,
     });
   }
 
-  //Busca os dados de uma escola uma única vez
-  Future<DocumentSnapshot> getSchoolData(String schoolId) {
+  // 🔎 Buscar os dados de uma escola uma única vez
+  Future<DocumentSnapshot<Map<String, dynamic>>> getSchoolData(String schoolId) {
     return _db.collection('escolas').doc(schoolId).get();
   }
 
-  //Busca os dados da escola em tempo real (para a tela de detalhes)
-  Stream<DocumentSnapshot> getSchoolStream(String schoolId) {
+  // 🔄 Buscar os dados da escola em tempo real (para a tela de detalhes)
+  Stream<DocumentSnapshot<Map<String, dynamic>>> getSchoolStream(String schoolId) {
     return _db.collection('escolas').doc(schoolId).snapshots();
   }
 
-  //Atualiza os dados da escola
+  // ✏️ Atualizar os dados da escola
   Future<void> updateSchool({
     required String schoolId,
     required String schoolName,
@@ -48,23 +51,29 @@ class SchoolService {
     await _db.collection('escolas').doc(schoolId).update({
       'nome': schoolName,
       'tipo': schoolType,
-      'outros_dados': otherData,
+      'info': otherData,
+      'updatedAt': FieldValue.serverTimestamp(),
     });
   }
 
-  //Deleta a escola
+  // ❌ Deletar escola
   Future<void> deleteSchool(String schoolId) async {
     final gestorId = _auth.currentUser?.uid;
     if (gestorId == null) {
       throw Exception('Usuário não autenticado.');
     }
 
-    // 1. Deletar o documento da escola
+    // 1. Deleta o documento da escola
     await _db.collection('escolas').doc(schoolId).delete();
 
-    // 2. Desvincular a escola do gestor (removendo o campo)
+    // 2. Desvincula a escola do gestor
     await _db.collection('users').doc(gestorId).update({
-      'id_escola': FieldValue.delete(),
+      'escolaId': FieldValue.delete(),
     });
+  }
+
+  // 📋 Listar todas as escolas (para dropdown de responsáveis)
+  Stream<QuerySnapshot<Map<String, dynamic>>> getAllSchoolsStream() {
+    return _db.collection('escolas').orderBy('nome').snapshots();
   }
 }

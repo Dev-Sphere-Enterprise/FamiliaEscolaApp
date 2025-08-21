@@ -1,10 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../services/auth_service.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
-
   @override
   State<RegisterPage> createState() => _RegisterPageState();
 }
@@ -22,7 +22,7 @@ class _RegisterPageState extends State<RegisterPage> {
   bool _obscureConfirm = true;
   bool _loading = false;
   bool _acceptTerms = false;
-  String _role = "responsavel"; // valor padrão
+  String _role = "responsavel"; // padrão
 
   @override
   void dispose() {
@@ -44,29 +44,53 @@ class _RegisterPageState extends State<RegisterPage> {
 
     setState(() => _loading = true);
     try {
-      // Criar usuário no Firebase Auth
       final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailCtrl.text.trim(),
         password: _passCtrl.text,
       );
-
       final uid = cred.user!.uid;
 
-      // Salvar dados no Firestore
-      await FirebaseFirestore.instance.collection("users").doc(uid).set({
-        "name": _nameCtrl.text.trim(),
-        "email": _emailCtrl.text.trim(),
-        "cpf": _cpfCtrl.text.trim(),
-        "dataNascimento": _birthDateCtrl.text.trim(),
-        "role": _role, // gestao ou responsavel
-        "createdAt": FieldValue.serverTimestamp(),
-      });
+      if (_role == "responsavel") {
+        // 1) encontra a escola do responsável pelo CPF do aluno
+        final alunoSnap = await FirebaseFirestore.instance
+            .collection("students")
+            .where("responsibleCpf", isEqualTo: _cpfCtrl.text.trim())
+            .limit(1)
+            .get();
 
-      // Atualizar token com custom claims (opcional, se usar no backend)
-      // Isso só é possível com Cloud Functions ou Admin SDK.
+        if (alunoSnap.docs.isEmpty) {
+          await cred.user!.delete();
+          setState(() => _loading = false);
+          _showSnack("Nenhum aluno vinculado a esse CPF.");
+          return;
+        }
+        final escolaId = alunoSnap.docs.first["escolaId"];
+
+        // 2) grava o user
+        await FirebaseFirestore.instance.collection("users").doc(uid).set({
+          "nome": _nameCtrl.text.trim(),
+          "email": _emailCtrl.text.trim(),
+          "cpf": _cpfCtrl.text.trim(),
+          "dataNascimento": _birthDateCtrl.text.trim(),
+          "role": "responsavel",
+          "escolaId": escolaId,
+          "createdAt": FieldValue.serverTimestamp(),
+        });
+
+      } else {
+        // GESTOR: cria user->escola->vínculo (sem batch, para respeitar as regras)
+        final auth = AuthService();
+        await auth.criarGestorEEscola(
+          uid: uid,
+          nomeGestor: _nameCtrl.text.trim(),
+          email: _emailCtrl.text.trim(),
+          cpf: _cpfCtrl.text.trim(),
+          nomeEscola: "Escola de ${_nameCtrl.text.trim()}", // ajuste se tiver input
+        );
+      }
 
       if (mounted) {
-        Navigator.pop(context); // volta para tela anterior
+        Navigator.pop(context);
         _showSnack("Cadastro realizado com sucesso!");
       }
     } on FirebaseAuthException catch (e) {
@@ -118,21 +142,16 @@ class _RegisterPageState extends State<RegisterPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // Logo
                         Padding(
                           padding: const EdgeInsets.only(bottom: 16),
                           child: Column(
                             children: [
                               SizedBox(
                                 height: 96,
-                                child: Image.asset(
-                                  'assets/logo.png',
-                                  fit: BoxFit.contain,
-                                ),
+                                child: Image.asset('assets/logo.png', fit: BoxFit.contain),
                               ),
                               const SizedBox(height: 8),
-                              Text(
-                                'Crie sua conta',
+                              Text('Crie sua conta',
                                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                                   fontWeight: FontWeight.w800,
                                 ),
@@ -142,39 +161,31 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                         const SizedBox(height: 8),
 
-                        // Nome
                         TextFormField(
                           controller: _nameCtrl,
                           decoration: const InputDecoration(
-                            labelText: 'Nome',
-                            hintText: 'ex: Rian Wilker',
+                            labelText: 'Nome', hintText: 'ex: Rian Wilker',
                             border: OutlineInputBorder(),
                           ),
-                          validator: (v) =>
-                          v!.trim().isEmpty ? 'Informe o nome' : null,
+                          validator: (v) => v!.trim().isEmpty ? 'Informe o nome' : null,
                         ),
                         const SizedBox(height: 12),
 
-                        // Email
                         TextFormField(
                           controller: _emailCtrl,
                           keyboardType: TextInputType.emailAddress,
                           decoration: const InputDecoration(
-                            labelText: 'Email',
-                            hintText: 'ex: jon.smith@email.com',
+                            labelText: 'Email', hintText: 'ex: jon.smith@email.com',
                             border: OutlineInputBorder(),
                           ),
                           validator: (v) {
                             if (v!.trim().isEmpty) return 'Informe o e-mail';
-                            if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(v)) {
-                              return 'E-mail inválido';
-                            }
+                            if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(v)) return 'E-mail inválido';
                             return null;
                           },
                         ),
                         const SizedBox(height: 12),
 
-                        // Senha
                         TextFormField(
                           controller: _passCtrl,
                           obscureText: _obscurePass,
@@ -182,11 +193,8 @@ class _RegisterPageState extends State<RegisterPage> {
                             labelText: 'Senha',
                             border: const OutlineInputBorder(),
                             suffixIcon: IconButton(
-                              icon: Icon(_obscurePass
-                                  ? Icons.visibility_off
-                                  : Icons.visibility),
-                              onPressed: () =>
-                                  setState(() => _obscurePass = !_obscurePass),
+                              icon: Icon(_obscurePass ? Icons.visibility_off : Icons.visibility),
+                              onPressed: () => setState(() => _obscurePass = !_obscurePass),
                             ),
                           ),
                           validator: (v) {
@@ -197,7 +205,6 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                         const SizedBox(height: 12),
 
-                        // Confirmar Senha
                         TextFormField(
                           controller: _confirmPassCtrl,
                           obscureText: _obscureConfirm,
@@ -205,11 +212,8 @@ class _RegisterPageState extends State<RegisterPage> {
                             labelText: 'Confirme sua senha',
                             border: const OutlineInputBorder(),
                             suffixIcon: IconButton(
-                              icon: Icon(_obscureConfirm
-                                  ? Icons.visibility_off
-                                  : Icons.visibility),
-                              onPressed: () => setState(
-                                      () => _obscureConfirm = !_obscureConfirm),
+                              icon: Icon(_obscureConfirm ? Icons.visibility_off : Icons.visibility),
+                              onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
                             ),
                           ),
                           validator: (v) {
@@ -220,17 +224,14 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                         const SizedBox(height: 12),
 
-                        // CPF
                         TextFormField(
                           controller: _cpfCtrl,
                           keyboardType: TextInputType.number,
                           decoration: const InputDecoration(
-                            labelText: 'CPF',
-                            hintText: '123.456.789-00',
+                            labelText: 'CPF', hintText: '123.456.789-10',
                             border: OutlineInputBorder(),
                           ),
-                          validator: (v) =>
-                          v!.trim().isEmpty ? 'Informe o CPF' : null,
+                          validator: (v) => v!.trim().isEmpty ? 'Informe o CPF' : null,
                         ),
                         const SizedBox(height: 12),
 
@@ -238,16 +239,13 @@ class _RegisterPageState extends State<RegisterPage> {
                           controller: _birthDateCtrl,
                           keyboardType: TextInputType.datetime,
                           decoration: const InputDecoration(
-                            labelText: 'Data de Nascimento',
-                            hintText: 'dd/mm/aaaa',
+                            labelText: 'Data de Nascimento', hintText: 'dd/mm/aaaa',
                             border: OutlineInputBorder(),
                           ),
-                          validator: (v) =>
-                          v!.trim().isEmpty ? 'Informe a data de nascimento' : null,
+                          validator: (v) => v!.trim().isEmpty ? 'Informe a data de nascimento' : null,
                         ),
                         const SizedBox(height: 12),
 
-                        // Botões de seleção de role
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -266,22 +264,17 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                         const SizedBox(height: 12),
 
-                        // Checkbox termos
                         Row(
                           children: [
                             Checkbox(
                               value: _acceptTerms,
-                              onChanged: (v) =>
-                                  setState(() => _acceptTerms = v ?? false),
+                              onChanged: (v) => setState(() => _acceptTerms = v ?? false),
                             ),
-                            const Expanded(
-                              child: Text("Eu aceito os termos"),
-                            ),
+                            const Expanded(child: Text("Eu aceito os termos")),
                           ],
                         ),
                         const SizedBox(height: 16),
 
-                        // Botão cadastrar
                         FilledButton(
                           onPressed: _loading ? null : _register,
                           style: FilledButton.styleFrom(
@@ -293,11 +286,10 @@ class _RegisterPageState extends State<RegisterPage> {
                           ),
                           child: _loading
                               ? const SizedBox(
-                            height: 20,
-                            width: 20,
+                            height: 20, width: 20,
                             child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                           )
-                              : const Text('Cadastra-se'),
+                              : const Text('Cadastrar-se'),
                         ),
                       ],
                     ),

@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../widgets/main_scaffold.dart';
+import 'aluno_detalhes_page.dart';
 
 class AlunosPage extends StatelessWidget {
   const AlunosPage({super.key});
@@ -34,14 +35,18 @@ class AlunosPage extends StatelessWidget {
 
         final userData = userSnapshot.data!.data() as Map<String, dynamic>;
         final role = userData['role'] ?? 'responsavel';
+        final escolaIdUser = userData['escolaId'];
 
         Stream<QuerySnapshot> alunosStream;
 
         if (role == 'gestao') {
-          // ✅ Gestor vê todos os alunos
-          alunosStream = FirebaseFirestore.instance.collection('students').snapshots();
+          // ✅ Gestor só vê os alunos da escola dele
+          alunosStream = FirebaseFirestore.instance
+              .collection('students')
+              .where('escolaId', isEqualTo: escolaIdUser)
+              .snapshots();
         } else {
-          // ✅ Responsável vê só os alunos cujo CPF de responsável bate com o dele
+          // ✅ Responsável vê só os alunos cujo CPF bate com o dele
           final cpfUsuario = userData['cpf'];
 
           if (cpfUsuario == null || cpfUsuario.toString().isEmpty) {
@@ -53,6 +58,7 @@ class AlunosPage extends StatelessWidget {
           alunosStream = FirebaseFirestore.instance
               .collection('students')
               .where('responsibleCpf', isEqualTo: cpfUsuario)
+              .where('escolaId', isEqualTo: escolaIdUser) // garante a mesma escola
               .snapshots();
         }
 
@@ -73,12 +79,48 @@ class AlunosPage extends StatelessWidget {
               return ListView.builder(
                 itemCount: alunos.length,
                 itemBuilder: (context, index) {
-                  final aluno = alunos[index].data() as Map<String, dynamic>;
-                  return Card(
-                    child: ListTile(
-                      title: Text(aluno['name'] ?? 'Sem nome'),
-                      subtitle: Text('Turma: ${aluno['turma'] ?? '---'}'),
-                    ),
+                  final alunoDoc = alunos[index];
+                  final aluno = alunoDoc.data() as Map<String, dynamic>;
+                  final escolaIdAluno = aluno['escolaId'];
+
+                  return StreamBuilder<DocumentSnapshot>(
+                    stream: escolaIdAluno != null
+                        ? FirebaseFirestore.instance.collection('escolas').doc(escolaIdAluno).snapshots()
+                        : const Stream.empty(),
+                    builder: (context, escolaSnapshot) {
+                      String escolaNome = "---";
+                      if (escolaSnapshot.hasData && escolaSnapshot.data!.exists) {
+                        final escolaData = escolaSnapshot.data!.data() as Map<String, dynamic>;
+                        escolaNome = escolaData['nome'] ?? "---";
+                      }
+
+                      return Card(
+                        child: ListTile(
+                          title: Text(aluno['nome'] ?? 'Sem nome'),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Escola: $escolaNome'),
+                              if (aluno['responsibleName'] != null)
+                                Text('Responsável: ${aluno['responsibleName']}'),
+                            ],
+                          ),
+                          trailing: ElevatedButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => AlunoDetalhesPage(
+                                    alunoId: alunoDoc.id,
+                                  ),
+                                ),
+                              );
+                            },
+                            child: const Text("Ver detalhes"),
+                          ),
+                        ),
+                      );
+                    },
                   );
                 },
               );

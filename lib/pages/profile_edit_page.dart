@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ProfileEditPage extends StatefulWidget {
   const ProfileEditPage({super.key});
@@ -14,16 +15,16 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
   final _authService = AuthService();
   bool _loading = false;
 
-  // Controllers para os campos do formulário
+  // Controllers
   final _nameCtrl = TextEditingController();
   final _cpfCtrl = TextEditingController();
-  final _birthDateCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
 
   @override
   void dispose() {
     _nameCtrl.dispose();
     _cpfCtrl.dispose();
-    _birthDateCtrl.dispose();
+    _emailCtrl.dispose();
     super.dispose();
   }
 
@@ -32,16 +33,22 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
     setState(() => _loading = true);
 
     try {
-      final uid = _authService.currentUser!.uid;
+      final user = FirebaseAuth.instance.currentUser!;
+      final uid = user.uid;
+
+      // Atualiza e-mail no Auth
+      await user.verifyBeforeUpdateEmail(_emailCtrl.text.trim());
+
+      // Atualiza dados no Firestore
       await _authService.updateUser(uid, {
-        'name': _nameCtrl.text.trim(),
+        'nome': _nameCtrl.text.trim(),
         'cpf': _cpfCtrl.text.trim(),
-        'dataNascimento': _birthDateCtrl.text.trim(),
+        'email': _emailCtrl.text.trim(),
       });
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Perfil atualizado com sucesso!")),
+          const SnackBar(content: Text("Perfil atualizado com sucesso! Verifique seu e-mail.")),
         );
         Navigator.pop(context);
       }
@@ -62,6 +69,10 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
         title: const Text("Editar Perfil"),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.close, color: Colors.white), // ou Icons.arrow_back
+          onPressed: () => Navigator.pop(context), // Fecha sem salvar
+        ),
       ),
       body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>?>(
         stream: _authService.getUserStream(),
@@ -71,10 +82,13 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
           }
           final userData = snapshot.data!.data() ?? {};
 
-          // Preenche os controllers com os dados existentes
-          _nameCtrl.text = userData['name'] ?? '';
+          // Preenche controllers
+          _nameCtrl.text = userData['nome'] ?? '';
           _cpfCtrl.text = userData['cpf'] ?? '';
-          _birthDateCtrl.text = userData['dataNascimento'] ?? '';
+          _emailCtrl.text = userData['email'] ?? '';
+
+          final role = userData['role'] ?? 'responsavel';
+          final escolaId = userData['escolaId'];
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
@@ -90,7 +104,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  _buildEditCard(userData),
+                  _buildEditCard(userData, role, escolaId),
                   const SizedBox(height: 24),
                   SizedBox(
                     width: double.infinity,
@@ -129,29 +143,57 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
     );
   }
 
-  Widget _buildEditCard(Map<String, dynamic> userData) {
+  Widget _buildEditCard(Map<String, dynamic> userData, String role, String? escolaId) {
     return Card(
       color: const Color(0xFFE0E0E0),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildTextFormField(controller: _nameCtrl, label: "Nome:"),
             _buildTextFormField(controller: _cpfCtrl, label: "CPF:"),
-            _buildTextFormField(controller: _birthDateCtrl, label: "Data de Nascimento:"),
-            // Exemplo de campo não editável
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 10.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text("Responsável por:", style: TextStyle(color: Colors.black54, fontSize: 16)),
-                  SizedBox(height: 4),
-                  Text("Júlio César de Menezes Duarte", style: TextStyle(color: Colors.black87, fontSize: 18)),
-                ],
+            _buildTextFormField(controller: _emailCtrl, label: "E-mail:"),
+            const SizedBox(height: 12),
+
+            if (role == "gestao") ...[
+              FutureBuilder<DocumentSnapshot>(
+                future: FirebaseFirestore.instance.collection("escolas").doc(escolaId).get(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData || !snapshot.data!.exists) {
+                    return const Text("Escola: não vinculada");
+                  }
+                  final escola = snapshot.data!.data() as Map<String, dynamic>;
+                  return Text("Escola: ${escola['nome'] ?? 'Sem nome'}",
+                      style: const TextStyle(fontSize: 16, color: Colors.black87));
+                },
               ),
-            ),
+            ],
+
+            if (role == "responsavel") ...[
+              const Text("Responsável por:", style: TextStyle(color: Colors.black54, fontSize: 16)),
+              const SizedBox(height: 4),
+              FutureBuilder<QuerySnapshot>(
+                future: FirebaseFirestore.instance
+                    .collection("students")
+                    .where("responsibleCpf", isEqualTo: userData['cpf'])
+                    .where("escolaId", isEqualTo: escolaId)
+                    .get(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) return const Text("Carregando alunos...");
+                  if (snapshot.data!.docs.isEmpty) return const Text("Nenhum aluno vinculado");
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: snapshot.data!.docs.map((doc) {
+                      final aluno = doc.data() as Map<String, dynamic>;
+                      return Text(aluno['nome'] ?? "Sem nome",
+                          style: const TextStyle(fontSize: 18, color: Colors.black87));
+                    }).toList(),
+                  );
+                },
+              ),
+            ],
           ],
         ),
       ),
@@ -167,7 +209,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
         decoration: InputDecoration(
           labelText: label,
           labelStyle: const TextStyle(color: Colors.black54, fontWeight: FontWeight.normal),
-          border: InputBorder.none, // Remove a borda
+          border: InputBorder.none,
           filled: true,
           fillColor: Colors.transparent,
         ),

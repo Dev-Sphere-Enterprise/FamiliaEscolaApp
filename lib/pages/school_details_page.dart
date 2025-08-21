@@ -22,7 +22,7 @@ class SchoolDetailsPage extends StatelessWidget {
           ),
         ],
       ),
-      body: StreamBuilder<DocumentSnapshot>(
+      body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
         stream: schoolService.getSchoolStream(schoolId),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -31,7 +31,8 @@ class SchoolDetailsPage extends StatelessWidget {
           if (!snapshot.hasData || !snapshot.data!.exists) {
             return const Center(child: Text('Escola não encontrada.'));
           }
-          final schoolData = snapshot.data!.data() as Map<String, dynamic>;
+
+          final schoolData = snapshot.data!.data()!;
 
           return Padding(
             padding: const EdgeInsets.all(16.0),
@@ -39,7 +40,7 @@ class SchoolDetailsPage extends StatelessWidget {
               children: [
                 _buildInfoCard("Nome", schoolData['nome'] ?? '...'),
                 _buildInfoCard("Tipo", schoolData['tipo'] ?? '...'),
-                _buildInfoCard("Outras Informações", schoolData['outros_dados'] ?? '...'),
+                _buildInfoCard("Outras Informações", schoolData['info'] ?? '...'),
               ],
             ),
           );
@@ -51,7 +52,9 @@ class SchoolDetailsPage extends StatelessWidget {
           if (context.mounted) {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => EditSchoolPage(schoolDocument: schoolDoc)),
+              MaterialPageRoute(
+                builder: (context) => EditSchoolPage(schoolDocument: schoolDoc),
+              ),
             );
           }
         },
@@ -76,7 +79,9 @@ class SchoolDetailsPage extends StatelessWidget {
       builder: (BuildContext ctx) {
         return AlertDialog(
           title: const Text('Confirmar Exclusão'),
-          content: const Text('Tem certeza de que deseja excluir esta escola? Esta ação não pode ser desfeita.'),
+          content: const Text(
+            'Tem certeza de que deseja excluir esta escola? Esta ação não pode ser desfeita.',
+          ),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
@@ -88,7 +93,7 @@ class SchoolDetailsPage extends StatelessWidget {
                   await schoolService.deleteSchool(schoolId);
                   if (context.mounted) {
                     Navigator.of(ctx).pop(); // Fecha o dialog
-                    Navigator.of(context).pop(); // Volta para a HomePage (que irá redirecionar)
+                    Navigator.of(context).pop(); // Volta para a HomePage
                   }
                 } catch (e) {
                   if (context.mounted) {
