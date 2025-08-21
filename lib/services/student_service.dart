@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class StudentService {
   final _db = FirebaseFirestore.instance;
 
-  /// ➕ Adiciona um novo aluno vinculado à escola
+  /// ➕ Adiciona um novo aluno na coleção raiz 'students'
   Future<void> addStudent({
     required String schoolId,
     required String studentName,
@@ -11,44 +11,39 @@ class StudentService {
     required String responsibleName,
     required String responsibleCpf,
   }) async {
-    await _db.collection('escolas').doc(schoolId).collection('alunos').add({
-      'name': studentName,
-      'birthDate': studentBirthDate,
+    await _db.collection('students').add({
+      'nome': studentName,
+      'dataNascimento': studentBirthDate,
       'responsibleName': responsibleName,
       'responsibleCpf': responsibleCpf,
+      'escolaId': schoolId,
       'createdAt': FieldValue.serverTimestamp(),
     });
   }
 
   /// 🔎 Busca alunos vinculados a um responsável pelo CPF em uma escola específica
-  Stream<List<DocumentSnapshot>> getStudentsForResponsibleByCpf(
+  /// CORREÇÃO: Agora busca na coleção raiz 'students'
+  Stream<QuerySnapshot<Map<String, dynamic>>> getStudentsForResponsibleByCpf(
       String schoolId, String cpf) {
     return _db
-        .collection('escolas')
-        .doc(schoolId)
-        .collection('alunos')
+        .collection('students')
         .where('responsibleCpf', isEqualTo: cpf)
-        .snapshots()
-        .map((snapshot) => snapshot.docs);
+        .where('escolaId', isEqualTo: schoolId)
+        .snapshots();
   }
 
-  /// ✏️ Atualiza dados de um aluno
-  Future<void> updateStudent(
-      String schoolId, String studentId, Map<String, dynamic> data) async {
+  /// ✏️ Atualiza dados de um aluno na coleção raiz 'students'
+  Future<void> updateStudent(String studentId, Map<String, dynamic> data) async {
     await _db
-        .collection('escolas')
-        .doc(schoolId)
-        .collection('alunos')
+        .collection('students')
         .doc(studentId)
         .update(data);
   }
 
-  /// ❌ Remove um aluno
-  Future<void> deleteStudent(String schoolId, String studentId) async {
+  /// ❌ Remove um aluno da coleção raiz 'students'
+  Future<void> deleteStudent(String studentId) async {
     await _db
-        .collection('escolas')
-        .doc(schoolId)
-        .collection('alunos')
+        .collection('students')
         .doc(studentId)
         .delete();
   }

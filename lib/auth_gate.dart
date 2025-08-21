@@ -19,12 +19,10 @@ class AuthGate extends StatelessWidget {
           );
         }
 
-        // 🔑 Usuário deslogado → vai pro LoginPage
         if (!snapshot.hasData) {
           return const LoginPage();
         }
 
-        // 🔑 Usuário logado → busca dados no Firestore
         return StreamBuilder<DocumentSnapshot>(
           stream: FirebaseFirestore.instance
               .collection('users')
@@ -37,29 +35,30 @@ class AuthGate extends StatelessWidget {
               );
             }
 
-            // ⚠️ Caso não encontre dados → volta pro LoginPage
             if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
+              FirebaseAuth.instance.signOut();
               return const LoginPage();
             }
 
             final userData = userSnapshot.data!.data() as Map<String, dynamic>;
-            final tipoPerfil = userData['role'] ?? 'responsavel';
+            final tipoPerfil = userData['role'];
             final idEscola = userData['escolaId'];
 
-            // Se for gestor sem escola vinculada → AddSchoolPage
             if (tipoPerfil == 'gestao' && (idEscola == null || idEscola.toString().isEmpty)) {
               return const AddSchoolPage();
             }
 
-            // Caso contrário → HomePage com id da escola
             if (idEscola != null && idEscola.toString().isNotEmpty) {
-              return HomePage();
+              return const HomePage();
             }
 
-            // ⚠️ Responsável sem escola vinculada → erro de fluxo
+            // Caso de um responsável que, por algum erro, não foi vinculado.
             return const Scaffold(
               body: Center(
-                child: Text("Você ainda não está vinculado a nenhuma escola."),
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Text("Você ainda não está vinculado a nenhuma escola. Contate a administração."),
+                ),
               ),
             );
           },
