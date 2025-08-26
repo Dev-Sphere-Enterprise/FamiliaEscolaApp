@@ -19,6 +19,7 @@ class AuthService {
     required String email,
     required String senha,
     required String cpf,
+    required String dataNascimento, // Adicionado para consistência
     required String role, // 'responsavel'
     required String escolaId,
   }) async {
@@ -27,6 +28,7 @@ class AuthService {
       'nome': nome,
       'email': email,
       'cpf': cpf,
+      'dataNascimento': dataNascimento, // Adicionado
       'role': role,
       'escolaId': escolaId,
       'createdAt': FieldValue.serverTimestamp(),
@@ -34,45 +36,44 @@ class AuthService {
     return cred;
   }
 
-  /// >>> REGISTRO DE GESTOR SEM BATCH <<<
-  /// Passo 1: cria/garante users/{uid} com role=gestao
-  /// Passo 2: cria escolas/{escolaId}
-  /// Passo 3: atualiza users/{uid}.escolaId
-  Future<String> criarGestorEEscola({
+  /// >>> REGISTRO DE GESTOR E ESCOLA COM BATCH WRITE <<<
+  /// Garante que o usuário e a escola sejam criados juntos, ou nenhum deles.
+  Future<void> criarGestorEEscola({
     required String uid,
     required String nomeGestor,
     required String email,
     required String cpf,
+    required String dataNascimento, // Parâmetro adicionado
     required String nomeEscola,
     String? tipoEscola, // opcional
   }) async {
     final userRef = _db.collection('users').doc(uid);
+    final escolaRef = _db.collection('escolas').doc();
 
-    // 1) garante perfil com role gestao (as regras de /escolas dependem disso)
-    await userRef.set({
+    // Usar um batch write garante que ambas as operações tenham sucesso ou falhem juntas.
+    WriteBatch batch = _db.batch();
+
+    // 1) Prepara a criação do documento do usuário (gestor)
+    batch.set(userRef, {
       'nome': nomeGestor,
       'email': email,
       'cpf': cpf,
+      'dataNascimento': dataNascimento, // Salva a data de nascimento
       'role': 'gestao',
-      'updatedAt': FieldValue.serverTimestamp(),
+      'escolaId': escolaRef.id, // Já vincula o ID da futura escola
       'createdAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    });
 
-    // 2) cria a escola (agora permitido, pois o user já tem role=gestao)
-    final escolaRef = _db.collection('escolas').doc();
-    await escolaRef.set({
+    // 2) Prepara a criação do documento da escola
+    batch.set(escolaRef, {
       'nome': nomeEscola,
+      'gestorId': uid,
       if (tipoEscola != null) 'tipo': tipoEscola,
       'createdAt': FieldValue.serverTimestamp(),
     });
 
-    // 3) vincula escolaId no usuário
-    await userRef.update({
-      'escolaId': escolaRef.id,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
-
-    return escolaRef.id;
+    // 3) Executa as duas operações de uma vez
+    await batch.commit();
   }
 
   Stream<DocumentSnapshot<Map<String, dynamic>>>? getUserStream() {
@@ -89,7 +90,9 @@ class AuthService {
     final user = currentUser;
     if (user == null) return;
     await _db.collection('users').doc(user.uid).delete();
-    try { await user.delete(); } on FirebaseAuthException catch (e) {
+    try {
+      await user.delete();
+    } on FirebaseAuthException catch (e) {
       print("Erro ao deletar conta de autenticação: ${e.message}");
     }
   }

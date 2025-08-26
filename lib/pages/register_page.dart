@@ -38,20 +38,34 @@ class _RegisterPageState extends State<RegisterPage> {
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
     if (!_acceptTerms) {
-      _showSnack("Você deve aceitar os termos para continuar.");
+      _showSnack("Você deve aceitar os termos para continuar.", isError: true);
       return;
     }
 
     setState(() => _loading = true);
+    User? userToDelete;
+
     try {
       final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailCtrl.text.trim(),
         password: _passCtrl.text,
       );
+      userToDelete = cred.user;
       final uid = cred.user!.uid;
 
       if (_role == "responsavel") {
-        // 1) encontra a escola do responsável pelo CPF do aluno
+        // ETAPA 1: Cria o documento do usuário sem a escolaId para satisfazer as regras
+        await FirebaseFirestore.instance.collection("users").doc(uid).set({
+          "nome": _nameCtrl.text.trim(),
+          "email": _emailCtrl.text.trim(),
+          "cpf": _cpfCtrl.text.trim(),
+          "dataNascimento": _birthDateCtrl.text.trim(),
+          "role": "responsavel",
+          "escolaId": null,
+          "createdAt": FieldValue.serverTimestamp(),
+        });
+
+        // ETAPA 2: Agora, a consulta aos alunos será permitida pelas novas regras
         final alunoSnap = await FirebaseFirestore.instance
             .collection("students")
             .where("responsibleCpf", isEqualTo: _cpfCtrl.text.trim())
@@ -59,44 +73,39 @@ class _RegisterPageState extends State<RegisterPage> {
             .get();
 
         if (alunoSnap.docs.isEmpty) {
-          await cred.user!.delete();
-          setState(() => _loading = false);
-          _showSnack("Nenhum aluno vinculado a esse CPF.");
-          return;
+          throw Exception("Nenhum aluno vinculado a esse CPF. Peça para a escola cadastrar o aluno primeiro.");
         }
+
         final escolaId = alunoSnap.docs.first["escolaId"];
 
-        // 2) grava o user
-        await FirebaseFirestore.instance.collection("users").doc(uid).set({
-          "nome": _nameCtrl.text.trim(),
-          "email": _emailCtrl.text.trim(),
-          "cpf": _cpfCtrl.text.trim(),
-          "dataNascimento": _birthDateCtrl.text.trim(),
-          "role": "responsavel",
+        // ETAPA 3: Atualiza o documento do usuário com a escolaId correta
+        await FirebaseFirestore.instance.collection("users").doc(uid).update({
           "escolaId": escolaId,
-          "createdAt": FieldValue.serverTimestamp(),
         });
 
-      } else {
-        // GESTOR: cria user->escola->vínculo (sem batch, para respeitar as regras)
+      } else { // GESTOR
         final auth = AuthService();
         await auth.criarGestorEEscola(
           uid: uid,
           nomeGestor: _nameCtrl.text.trim(),
           email: _emailCtrl.text.trim(),
           cpf: _cpfCtrl.text.trim(),
-          nomeEscola: "Escola de ${_nameCtrl.text.trim()}", // ajuste se tiver input
+          dataNascimento: _birthDateCtrl.text.trim(),
+          nomeEscola: "Escola de ${_nameCtrl.text.trim()}",
         );
       }
 
       if (mounted) {
         Navigator.pop(context);
-        _showSnack("Cadastro realizado com sucesso!");
+        _showSnack("Cadastro realizado com sucesso!", isError: false);
       }
     } on FirebaseAuthException catch (e) {
-      _showSnack(_mapFirebaseError(e));
+      _showSnack(_mapFirebaseError(e), isError: true);
     } catch (e) {
-      _showSnack("Erro inesperado: $e");
+      if (userToDelete != null) {
+        await userToDelete.delete();
+      }
+      _showSnack(e.toString().replaceFirst("Exception: ", ""), isError: true);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -111,16 +120,21 @@ class _RegisterPageState extends State<RegisterPage> {
       case 'weak-password':
         return 'A senha é muito fraca.';
       default:
-        return 'Erro: ${e.code}';
+        return 'Erro de autenticação: ${e.code}';
     }
   }
 
-  void _showSnack(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  void _showSnack(String msg, {bool isError = true}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg),
+      backgroundColor: isError ? Colors.red : Colors.green,
+    ));
   }
 
   @override
   Widget build(BuildContext context) {
+    // O seu widget build continua o mesmo
     final maxWidth = 420.0;
 
     return Scaffold(

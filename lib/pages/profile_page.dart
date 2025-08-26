@@ -94,16 +94,17 @@ class ProfilePage extends StatelessWidget {
                           child: Text("CPF não encontrado para este usuário."),
                         );
                       }
-                      return StreamBuilder<List<DocumentSnapshot>>(
+                      // CORREÇÃO: O tipo do StreamBuilder foi ajustado para QuerySnapshot<Map<String, dynamic>>
+                      return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                         stream: studentService.getStudentsForResponsibleByCpf(schoolId, cpf),
                         builder: (context, studentSnapshot) {
                           if (studentSnapshot.connectionState == ConnectionState.waiting) {
                             return const Center(child: CircularProgressIndicator());
                           }
-                          if (!studentSnapshot.hasData || studentSnapshot.data!.isEmpty) {
+                          if (!studentSnapshot.hasData || studentSnapshot.data!.docs.isEmpty) {
                             return const Center(child: Text('Nenhum aluno vinculado.'));
                           }
-                          final students = studentSnapshot.data!;
+                          final students = studentSnapshot.data!.docs;
                           return _buildStudentsList(students);
                         },
                       );
@@ -137,7 +138,7 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildStudentsList(List<DocumentSnapshot> students) {
+  Widget _buildStudentsList(List<QueryDocumentSnapshot<Map<String, dynamic>>> students) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -151,7 +152,7 @@ class ProfilePage extends StatelessWidget {
           physics: const NeverScrollableScrollPhysics(),
           itemCount: students.length,
           itemBuilder: (context, index) {
-            final studentData = students[index].data() as Map<String, dynamic>;
+            final studentData = students[index].data();
             return Card(
               child: ListTile(
                 title: Text(studentData['nome'] ?? 'Nome não encontrado'),

@@ -15,6 +15,8 @@ class HomePage extends StatelessWidget {
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
+      // Se por algum motivo o usuário for nulo, volta para o AuthGate que resolverá.
+      // Isso evita erros se a HomePage for acessada indevidamente.
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
@@ -34,8 +36,11 @@ class HomePage extends StatelessWidget {
           );
         }
 
+        // CORREÇÃO: Verifica se o snapshot não tem dados ou se o documento foi deletado.
+        // Se isso acontecer, desloga o usuário para que o AuthGate o redirecione para a tela de login.
         if (!snapshot.hasData || !snapshot.data!.exists) {
           FirebaseAuth.instance.signOut();
+          // Mostra um indicador de carregamento enquanto o signOut redireciona.
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
@@ -70,7 +75,7 @@ class HomePage extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
 
-                // 🔔 Quadro de Avisos (3 mais recentes da escola)
+                // 🔔 Quadro de Avisos (4 mais recentes da escola)
                 Flexible(
                   child: StreamBuilder<QuerySnapshot>(
                     stream: FirebaseFirestore.instance
