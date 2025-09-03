@@ -155,6 +155,7 @@ class AlunoDetalhesPage extends StatelessWidget {
 
               final aluno = snapshot.data!.data() as Map<String, dynamic>;
               final escolaId = aluno['escolaId'];
+              final turmaId = aluno['turmaId'];
 
               return ListView(
                 padding: const EdgeInsets.all(16),
@@ -196,6 +197,30 @@ class AlunoDetalhesPage extends StatelessWidget {
                       return Text("Escola: $escolaNome");
                     },
                   ),
+                  const SizedBox(height: 12),
+
+                  // 🔹 Buscar nome da turma
+                  if (turmaId != null && escolaId != null)
+                    StreamBuilder<DocumentSnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection('escolas')
+                          .doc(escolaId)
+                          .collection('turmas')
+                          .doc(turmaId)
+                          .snapshots(),
+                      builder: (context, turmaSnapshot) {
+                        if (turmaSnapshot.connectionState == ConnectionState.waiting) {
+                          return const Text("Turma: Carregando...");
+                        }
+                        if (turmaSnapshot.hasData && turmaSnapshot.data!.exists) {
+                          final turmaData = turmaSnapshot.data!.data() as Map<String, dynamic>;
+                          return Text('Turma: ${turmaData['nome'] ?? "Sem nome"}');
+                        }
+                        return const Text("Turma: Não matriculado");
+                      },
+                    )
+                  else
+                    const Text("Turma: Não matriculado"),
                 ],
               );
             },
