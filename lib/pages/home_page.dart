@@ -1,4 +1,5 @@
 import 'package:FamiliaEscolaApp/pages/alunos_page.dart';
+import 'package:FamiliaEscolaApp/pages/turmas_page.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -246,7 +247,14 @@ class HomePage extends StatelessWidget {
                         );
                       }),
                       _menuButton("Escola", Icons.school, () {}),
-                      _menuButton("Turmas", Icons.class_, () {}),
+                      _menuButton("Turmas", Icons.class_, () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const TurmasPage(),
+                          ),
+                        );
+                      }),
                       _menuButton("Chat", Icons.chat, () {}),
                       if (isGestor)
                         _menuButton("Adicionar Aluno", Icons.person_add, () {
