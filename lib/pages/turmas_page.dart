@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'add_turma_page.dart';
+import 'turma_detalhes_page.dart';
 import '../widgets/main_scaffold.dart';
 
 class TurmasPage extends StatelessWidget {
@@ -65,10 +66,23 @@ class TurmasPage extends StatelessWidget {
                 itemBuilder: (context, index) {
                   final turmaDoc = turmas[index];
                   final turma = turmaDoc.data() as Map<String, dynamic>;
+                  final turmaNome = turma['nome'] ?? 'Sem nome';
 
                   return Card(
                     child: ListTile(
-                      title: Text(turma['nome'] ?? 'Sem nome'),
+                      title: Text(turmaNome),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => TurmaDetalhesPage(
+                              escolaId: escolaId,
+                              turmaId: turmaDoc.id,
+                              turmaNome: turmaNome,
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   );
                 },
