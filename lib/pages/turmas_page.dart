@@ -8,6 +8,72 @@ import '../widgets/main_scaffold.dart';
 class TurmasPage extends StatelessWidget {
   const TurmasPage({super.key});
 
+  Future<void> _editarTurma(
+      BuildContext context, String escolaId, String turmaId, String nomeAtual) async {
+    final controller = TextEditingController(text: nomeAtual);
+
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Editar Turma"),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(labelText: "Nome da turma"),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancelar"),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (controller.text.trim().isNotEmpty) {
+                await FirebaseFirestore.instance
+                    .collection('escolas')
+                    .doc(escolaId)
+                    .collection('turmas')
+                    .doc(turmaId)
+                    .update({"nome": controller.text.trim()});
+              }
+              Navigator.pop(context);
+            },
+            child: const Text("Salvar"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _excluirTurma(
+      BuildContext context, String escolaId, String turmaId) async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Excluir Turma"),
+        content: const Text("Tem certeza que deseja excluir esta turma?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancelar"),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Excluir"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar == true) {
+      await FirebaseFirestore.instance
+          .collection('escolas')
+          .doc(escolaId)
+          .collection('turmas')
+          .doc(turmaId)
+          .delete();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -19,7 +85,8 @@ class TurmasPage extends StatelessWidget {
     }
 
     return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance.collection('users').doc(uid).snapshots(),
+      stream:
+      FirebaseFirestore.instance.collection('users').doc(uid).snapshots(),
       builder: (context, userSnapshot) {
         if (userSnapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
@@ -69,8 +136,33 @@ class TurmasPage extends StatelessWidget {
                   final turmaNome = turma['nome'] ?? 'Sem nome';
 
                   return Card(
+                    margin: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 6),
                     child: ListTile(
-                      title: Text(turmaNome),
+                      title: Text(
+                        turmaNome,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      trailing: PopupMenuButton<String>(
+                        onSelected: (value) {
+                          if (value == 'editar') {
+                            _editarTurma(
+                                context, escolaId, turmaDoc.id, turmaNome);
+                          } else if (value == 'excluir') {
+                            _excluirTurma(context, escolaId, turmaDoc.id);
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          const PopupMenuItem(
+                            value: 'editar',
+                            child: Text("Editar"),
+                          ),
+                          const PopupMenuItem(
+                            value: 'excluir',
+                            child: Text("Excluir"),
+                          ),
+                        ],
+                      ),
                       onTap: () {
                         Navigator.push(
                           context,
