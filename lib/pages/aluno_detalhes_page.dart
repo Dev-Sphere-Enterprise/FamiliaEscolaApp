@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 
 class AlunoDetalhesPage extends StatelessWidget {
   final String alunoId;
@@ -28,28 +29,33 @@ class AlunoDetalhesPage extends StatelessWidget {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("Editar Aluno"),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text("✏️ Editar Aluno"),
         content: SingleChildScrollView(
           child: Column(
             children: [
               TextField(
                 controller: nomeCtrl,
-                decoration: const InputDecoration(labelText: "Nome do Aluno"),
+                decoration: const InputDecoration(
+                    labelText: "Nome do Aluno", prefixIcon: Icon(Icons.person)),
               ),
               TextField(
                 controller: nascimentoCtrl,
-                decoration:
-                const InputDecoration(labelText: "Data de Nascimento"),
+                decoration: const InputDecoration(
+                    labelText: "Data de Nascimento",
+                    prefixIcon: Icon(Icons.cake)),
               ),
               TextField(
                 controller: respNomeCtrl,
-                decoration:
-                const InputDecoration(labelText: "Nome do Responsável"),
+                decoration: const InputDecoration(
+                    labelText: "Nome do Responsável",
+                    prefixIcon: Icon(Icons.family_restroom)),
               ),
               TextField(
                 controller: respCpfCtrl,
-                decoration:
-                const InputDecoration(labelText: "CPF do Responsável"),
+                decoration: const InputDecoration(
+                    labelText: "CPF do Responsável",
+                    prefixIcon: Icon(Icons.badge)),
               ),
             ],
           ),
@@ -59,7 +65,8 @@ class AlunoDetalhesPage extends StatelessWidget {
             onPressed: () => Navigator.pop(context),
             child: const Text("Cancelar"),
           ),
-          ElevatedButton(
+          ElevatedButton.icon(
+            icon: const Icon(Icons.save),
             onPressed: () async {
               await FirebaseFirestore.instance
                   .collection("students")
@@ -72,7 +79,7 @@ class AlunoDetalhesPage extends StatelessWidget {
               });
               Navigator.pop(context);
             },
-            child: const Text("Salvar"),
+            label: const Text("Salvar"),
           ),
         ],
       ),
@@ -83,14 +90,18 @@ class AlunoDetalhesPage extends StatelessWidget {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("Excluir Aluno"),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text("⚠️ Excluir Aluno"),
         content: const Text("Tem certeza que deseja excluir este aluno?"),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text("Cancelar"),
           ),
-          ElevatedButton(
+          ElevatedButton.icon(
+            icon: const Icon(Icons.delete_forever),
+            label: const Text("Excluir"),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () async {
               await FirebaseFirestore.instance
                   .collection("students")
@@ -99,10 +110,25 @@ class AlunoDetalhesPage extends StatelessWidget {
               Navigator.pop(context); // fecha o dialog
               Navigator.pop(context); // volta da tela de detalhes
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text("Excluir"),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _infoCard(IconData icon, String title, String value) {
+    return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: Colors.blue.shade100,
+          child: Icon(icon, color: Colors.blue.shade700),
+        ),
+        title: Text(title,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        subtitle: Text(value, style: const TextStyle(fontSize: 15)),
       ),
     );
   }
@@ -117,27 +143,8 @@ class AlunoDetalhesPage extends StatelessWidget {
         return Scaffold(
           appBar: AppBar(
             title: const Text("Detalhes do Aluno"),
-            actions: ehGestor
-                ? [
-              IconButton(
-                icon: const Icon(Icons.edit),
-                onPressed: () async {
-                  final alunoDoc = await FirebaseFirestore.instance
-                      .collection("students")
-                      .doc(alunoId)
-                      .get();
-                  if (alunoDoc.exists) {
-                    _editarAluno(context, alunoId,
-                        alunoDoc.data() as Map<String, dynamic>);
-                  }
-                },
-              ),
-              IconButton(
-                icon: const Icon(Icons.delete),
-                onPressed: () => _excluirAluno(context, alunoId),
-              ),
-            ]
-                : null,
+            centerTitle: true,
+            backgroundColor: Colors.blue.shade700,
           ),
           body: StreamBuilder<DocumentSnapshot>(
             stream: FirebaseFirestore.instance
@@ -160,25 +167,32 @@ class AlunoDetalhesPage extends StatelessWidget {
               return ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
+                  Center(
+                    child: CircleAvatar(
+                      radius: 50,
+                      backgroundColor: Colors.blue.shade200,
+                      child: const Icon(Icons.person,
+                          size: 60, color: Colors.white),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   Text(
-                    "Nome: ${aluno['nome'] ?? '---'}",
+                    aluno['nome'] ?? '---',
+                    textAlign: TextAlign.center,
                     style: const TextStyle(
-                      fontSize: 20,
+                      fontSize: 22,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 24),
 
-                  Text(
-                      "Data de Nascimento: ${aluno['dataNascimento'] ?? '---'}"),
-                  const SizedBox(height: 12),
+                  _infoCard(Icons.cake, "Data de Nascimento",
+                      aluno['dataNascimento'] ?? "---"),
+                  _infoCard(Icons.family_restroom, "Responsável",
+                      aluno['responsibleName'] ?? "---"),
+                  _infoCard(Icons.badge, "CPF do Responsável",
+                      aluno['responsibleCpf'] ?? "---"),
 
-                  Text("Responsável: ${aluno['responsibleName'] ?? '---'}"),
-                  const SizedBox(height: 8),
-                  Text("CPF do Responsável: ${aluno['responsibleCpf'] ?? '---'}"),
-                  const SizedBox(height: 16),
-
-                  // 🔹 Buscar nome da escola
                   StreamBuilder<DocumentSnapshot>(
                     stream: escolaId != null
                         ? FirebaseFirestore.instance
@@ -190,16 +204,15 @@ class AlunoDetalhesPage extends StatelessWidget {
                       String escolaNome = "---";
                       if (escolaSnapshot.hasData &&
                           escolaSnapshot.data!.exists) {
-                        final escolaData = escolaSnapshot.data!.data()
-                        as Map<String, dynamic>;
+                        final escolaData =
+                        escolaSnapshot.data!.data() as Map<String, dynamic>;
                         escolaNome = escolaData['nome'] ?? "---";
                       }
-                      return Text("Escola: $escolaNome");
+                      return _infoCard(Icons.school, "Escola", escolaNome);
                     },
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
 
-                  // 🔹 Buscar nome da turma
                   if (turmaId != null && escolaId != null)
                     StreamBuilder<DocumentSnapshot>(
                       stream: FirebaseFirestore.instance
@@ -209,22 +222,54 @@ class AlunoDetalhesPage extends StatelessWidget {
                           .doc(turmaId)
                           .snapshots(),
                       builder: (context, turmaSnapshot) {
-                        if (turmaSnapshot.connectionState == ConnectionState.waiting) {
-                          return const Text("Turma: Carregando...");
+                        if (turmaSnapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return _infoCard(Icons.group, "Turma", "Carregando...");
                         }
-                        if (turmaSnapshot.hasData && turmaSnapshot.data!.exists) {
-                          final turmaData = turmaSnapshot.data!.data() as Map<String, dynamic>;
-                          return Text('Turma: ${turmaData['nome'] ?? "Sem nome"}');
+                        if (turmaSnapshot.hasData &&
+                            turmaSnapshot.data!.exists) {
+                          final turmaData = turmaSnapshot.data!.data()
+                          as Map<String, dynamic>;
+                          return _infoCard(
+                              Icons.group, "Turma", turmaData['nome'] ?? "---");
                         }
-                        return const Text("Turma: Não matriculado");
+                        return _infoCard(Icons.group, "Turma", "Não matriculado");
                       },
                     )
                   else
-                    const Text("Turma: Não matriculado"),
+                    _infoCard(Icons.group, "Turma", "Não matriculado"),
                 ],
               );
             },
           ),
+          floatingActionButton: ehGestor
+              ? SpeedDial(
+            icon: Icons.settings,
+            activeIcon: Icons.close,
+            backgroundColor: Colors.blue.shade700,
+            children: [
+              SpeedDialChild(
+                child: const Icon(Icons.edit),
+                label: "Editar",
+                onTap: () async {
+                  final alunoDoc = await FirebaseFirestore.instance
+                      .collection("students")
+                      .doc(alunoId)
+                      .get();
+                  if (alunoDoc.exists) {
+                    _editarAluno(context, alunoId,
+                        alunoDoc.data() as Map<String, dynamic>);
+                  }
+                },
+              ),
+              SpeedDialChild(
+                child: const Icon(Icons.delete, color: Colors.red),
+                label: "Excluir",
+                onTap: () => _excluirAluno(context, alunoId),
+              ),
+            ],
+          )
+              : null,
         );
       },
     );
