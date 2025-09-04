@@ -36,10 +36,8 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
       final user = FirebaseAuth.instance.currentUser!;
       final uid = user.uid;
 
-      // Atualiza e-mail no Auth
       await user.verifyBeforeUpdateEmail(_emailCtrl.text.trim());
 
-      // Atualiza dados no Firestore
       await _authService.updateUser(uid, {
         'nome': _nameCtrl.text.trim(),
         'cpf': _cpfCtrl.text.trim(),
@@ -48,7 +46,8 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Perfil atualizado com sucesso! Verifique seu e-mail.")),
+          const SnackBar(
+              content: Text("Perfil atualizado! Verifique seu e-mail.")),
         );
         Navigator.pop(context);
       }
@@ -64,14 +63,14 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF333333),
+      backgroundColor: Colors.grey[100],
       appBar: AppBar(
         title: const Text("Editar Perfil"),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
+        backgroundColor: Colors.white,
+        elevation: 1,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.white), // ou Icons.arrow_back
-          onPressed: () => Navigator.pop(context), // Fecha sem salvar
+          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          onPressed: () => Navigator.pop(context),
         ),
       ),
       body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>?>(
@@ -82,7 +81,6 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
           }
           final userData = snapshot.data!.data() ?? {};
 
-          // Preenche controllers
           _nameCtrl.text = userData['nome'] ?? '';
           _cpfCtrl.text = userData['cpf'] ?? '';
           _emailCtrl.text = userData['email'] ?? '';
@@ -91,35 +89,43 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
           final escolaId = userData['escolaId'];
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             child: Form(
               key: _formKey,
               child: Column(
                 children: [
-                  _buildProfileHeader(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF2E86C1), Color(0xFF28B463)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                  ),
+                  _buildProfileHeader(userData['nome']),
                   const SizedBox(height: 24),
+
                   _buildEditCard(userData, role, escolaId),
-                  const SizedBox(height: 24),
+
+                  const SizedBox(height: 32),
+
                   SizedBox(
                     width: double.infinity,
-                    child: FilledButton(
+                    child: ElevatedButton.icon(
                       onPressed: _loading ? null : _updateUser,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFF28a745),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blueAccent,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: _loading
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text("Salvar", style: TextStyle(fontSize: 18)),
+                      icon: _loading
+                          ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                          : const Icon(Icons.save, color: Colors.white),
+                      label: const Text(
+                        "Salvar Alterações",
+                        style: TextStyle(fontSize: 16, color: Colors.white),
+                      ),
                     ),
                   ),
                 ],
@@ -131,49 +137,64 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
     );
   }
 
-  Widget _buildProfileHeader({required Gradient gradient}) {
-    return Container(
-      height: 200,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        gradient: gradient,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: const Icon(Icons.person, size: 120, color: Colors.white),
+  Widget _buildProfileHeader(String? nome) {
+    return Column(
+      children: [
+        CircleAvatar(
+          radius: 50,
+          backgroundColor: Colors.blueAccent,
+          child: const Icon(Icons.person, size: 60, color: Colors.white),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          nome ?? "Usuário",
+          style: const TextStyle(
+              fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87),
+        ),
+      ],
     );
   }
 
-  Widget _buildEditCard(Map<String, dynamic> userData, String role, String? escolaId) {
+  Widget _buildEditCard(
+      Map<String, dynamic> userData, String role, String? escolaId) {
     return Card(
-      color: const Color(0xFFE0E0E0),
+      elevation: 3,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildTextFormField(controller: _nameCtrl, label: "Nome:"),
-            _buildTextFormField(controller: _cpfCtrl, label: "CPF:"),
-            _buildTextFormField(controller: _emailCtrl, label: "E-mail:"),
-            const SizedBox(height: 12),
+            _buildTextFormField(controller: _nameCtrl, label: "Nome"),
+            _buildTextFormField(controller: _cpfCtrl, label: "CPF"),
+            _buildTextFormField(controller: _emailCtrl, label: "E-mail"),
 
+            const SizedBox(height: 16),
             if (role == "gestao") ...[
               FutureBuilder<DocumentSnapshot>(
-                future: FirebaseFirestore.instance.collection("escolas").doc(escolaId).get(),
+                future: FirebaseFirestore.instance
+                    .collection("escolas")
+                    .doc(escolaId)
+                    .get(),
                 builder: (context, snapshot) {
                   if (!snapshot.hasData || !snapshot.data!.exists) {
-                    return const Text("Escola: não vinculada");
+                    return const Text("Escola: não vinculada",
+                        style: TextStyle(color: Colors.black54));
                   }
                   final escola = snapshot.data!.data() as Map<String, dynamic>;
                   return Text("Escola: ${escola['nome'] ?? 'Sem nome'}",
-                      style: const TextStyle(fontSize: 16, color: Colors.black87));
+                      style: const TextStyle(
+                          fontSize: 16, color: Colors.black87));
                 },
               ),
             ],
 
             if (role == "responsavel") ...[
-              const Text("Responsável por:", style: TextStyle(color: Colors.black54, fontSize: 16)),
-              const SizedBox(height: 4),
+              const Text("Responsável por:",
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black87)),
+              const SizedBox(height: 6),
               FutureBuilder<QuerySnapshot>(
                 future: FirebaseFirestore.instance
                     .collection("students")
@@ -181,14 +202,22 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                     .where("escolaId", isEqualTo: escolaId)
                     .get(),
                 builder: (context, snapshot) {
-                  if (!snapshot.hasData) return const Text("Carregando alunos...");
-                  if (snapshot.data!.docs.isEmpty) return const Text("Nenhum aluno vinculado");
+                  if (!snapshot.hasData) {
+                    return const Text("Carregando alunos...");
+                  }
+                  if (snapshot.data!.docs.isEmpty) {
+                    return const Text("Nenhum aluno vinculado");
+                  }
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: snapshot.data!.docs.map((doc) {
                       final aluno = doc.data() as Map<String, dynamic>;
-                      return Text(aluno['nome'] ?? "Sem nome",
-                          style: const TextStyle(fontSize: 18, color: Colors.black87));
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Text(aluno['nome'] ?? "Sem nome",
+                            style: const TextStyle(
+                                fontSize: 16, color: Colors.black87)),
+                      );
                     }).toList(),
                   );
                 },
@@ -200,18 +229,19 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
     );
   }
 
-  Widget _buildTextFormField({required TextEditingController controller, required String label}) {
+  Widget _buildTextFormField(
+      {required TextEditingController controller, required String label}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: TextFormField(
         controller: controller,
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: const TextStyle(color: Colors.black54, fontWeight: FontWeight.normal),
-          border: InputBorder.none,
-          filled: true,
-          fillColor: Colors.transparent,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          contentPadding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
         validator: (v) => v!.trim().isEmpty ? 'Campo obrigatório' : null,
       ),

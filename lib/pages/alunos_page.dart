@@ -40,13 +40,11 @@ class AlunosPage extends StatelessWidget {
         Stream<QuerySnapshot> alunosStream;
 
         if (role == 'gestao') {
-          // ✅ Gestor só vê os alunos da escola dele
           alunosStream = FirebaseFirestore.instance
               .collection('students')
               .where('escolaId', isEqualTo: escolaIdUser)
               .snapshots();
         } else {
-          // ✅ Responsável vê só os alunos cujo CPF bate com o dele
           final cpfUsuario = userData['cpf'];
 
           if (cpfUsuario == null || cpfUsuario.toString().isEmpty) {
@@ -58,73 +56,121 @@ class AlunosPage extends StatelessWidget {
           alunosStream = FirebaseFirestore.instance
               .collection('students')
               .where('responsibleCpf', isEqualTo: cpfUsuario)
-              .where('escolaId', isEqualTo: escolaIdUser) // garante a mesma escola
+              .where('escolaId', isEqualTo: escolaIdUser)
               .snapshots();
         }
 
         return MainScaffold(
           currentIndex: 0,
-          body: StreamBuilder<QuerySnapshot>(
-            stream: alunosStream,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                return const Center(child: Text("Nenhum aluno encontrado."));
-              }
+          body: Scaffold(
+            body: StreamBuilder<QuerySnapshot>(
+              stream: alunosStream,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return const Center(
+                    child: Text(
+                      "Nenhum aluno encontrado.",
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                    ),
+                  );
+                }
 
-              final alunos = snapshot.data!.docs;
+                final alunos = snapshot.data!.docs;
 
-              return ListView.builder(
-                itemCount: alunos.length,
-                itemBuilder: (context, index) {
-                  final alunoDoc = alunos[index];
-                  final aluno = alunoDoc.data() as Map<String, dynamic>;
-                  final escolaIdAluno = aluno['escolaId'];
+                return ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemCount: alunos.length,
+                  itemBuilder: (context, index) {
+                    final alunoDoc = alunos[index];
+                    final aluno = alunoDoc.data() as Map<String, dynamic>;
+                    final escolaIdAluno = aluno['escolaId'];
 
-                  return StreamBuilder<DocumentSnapshot>(
-                    stream: escolaIdAluno != null
-                        ? FirebaseFirestore.instance.collection('escolas').doc(escolaIdAluno).snapshots()
-                        : const Stream.empty(),
-                    builder: (context, escolaSnapshot) {
-                      String escolaNome = "---";
-                      if (escolaSnapshot.hasData && escolaSnapshot.data!.exists) {
-                        final escolaData = escolaSnapshot.data!.data() as Map<String, dynamic>;
-                        escolaNome = escolaData['nome'] ?? "---";
-                      }
+                    return StreamBuilder<DocumentSnapshot>(
+                      stream: escolaIdAluno != null
+                          ? FirebaseFirestore.instance.collection('escolas').doc(escolaIdAluno).snapshots()
+                          : const Stream.empty(),
+                      builder: (context, escolaSnapshot) {
+                        String escolaNome = "---";
+                        if (escolaSnapshot.hasData && escolaSnapshot.data!.exists) {
+                          final escolaData = escolaSnapshot.data!.data() as Map<String, dynamic>;
+                          escolaNome = escolaData['nome'] ?? "---";
+                        }
 
-                      return Card(
-                        child: ListTile(
-                          title: Text(aluno['nome'] ?? 'Sem nome'),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Escola: $escolaNome'),
-                              if (aluno['responsibleName'] != null)
-                                Text('Responsável: ${aluno['responsibleName']}'),
-                            ],
+                        return Card(
+                          elevation: 4,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
                           ),
-                          trailing: ElevatedButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => AlunoDetalhesPage(
-                                    alunoId: alunoDoc.id,
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 28,
+                                  backgroundColor: Colors.blue.shade100,
+                                  child: Text(
+                                    (aluno['nome'] != null && aluno['nome'].toString().isNotEmpty)
+                                        ? aluno['nome'][0].toUpperCase()
+                                        : "?",
+                                    style: TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.blue.shade700,
+                                    ),
                                   ),
                                 ),
-                              );
-                            },
-                            child: const Text("Ver detalhes"),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        aluno['nome'] ?? 'Sem nome',
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text("Escola: $escolaNome",
+                                          style: TextStyle(color: Colors.grey.shade700)),
+                                      if (aluno['responsibleName'] != null)
+                                        Text("Responsável: ${aluno['responsibleName']}",
+                                            style: TextStyle(color: Colors.grey.shade700)),
+                                    ],
+                                  ),
+                                ),
+                                OutlinedButton.icon(
+                                  style: OutlinedButton.styleFrom(
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ),
+                                  icon: const Icon(Icons.arrow_forward),
+                                  label: const Text("Detalhes"),
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => AlunoDetalhesPage(
+                                          alunoId: alunoDoc.id,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                  );
-                },
-              );
-            },
+                        );
+                      },
+                    );
+                  },
+                );
+              },
+            ),
           ),
         );
       },
