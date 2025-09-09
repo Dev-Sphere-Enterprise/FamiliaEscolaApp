@@ -7,6 +7,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/main_scaffold.dart';
 import 'add_student_page.dart';
 import 'avisos_page.dart';
+import 'responsaveis_page.dart';
+
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -230,7 +232,7 @@ class HomePage extends StatelessWidget {
                   ),
                 ),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 15),
 
                 // 🔘 Botões de Atalho
                 Center(
@@ -266,6 +268,18 @@ class HomePage extends StatelessWidget {
                             ),
                           );
                         }),
+                      if (isGestor)
+                        _menuButton("Responsáveis", Icons.supervised_user_circle, () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ResponsaveisPage(
+                                escolaId: escolaId,
+                                gestorUid: uid, // passa UID do gestor logado
+                              ),
+                            ),
+                          );
+                        }),
                     ],
                   ),
                 )
@@ -279,7 +293,7 @@ class HomePage extends StatelessWidget {
 
   Widget _menuButton(String text, IconData icon, VoidCallback onPressed) {
     return SizedBox(
-      width: 150,
+      width: 160,
       height: 60,
       child: ElevatedButton.icon(
         onPressed: onPressed,
