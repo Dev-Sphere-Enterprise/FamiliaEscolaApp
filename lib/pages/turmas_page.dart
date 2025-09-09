@@ -105,13 +105,21 @@ class TurmasPage extends StatelessWidget {
         final escolaId = userData['escolaId'];
 
         if (role != 'gestao') {
-          return const Scaffold(
-            body: Center(child: Text("Acesso negado")),
+          return const MainScaffold(
+            currentIndex: 2,
+            body: Center(child: Text("Acesso negado. Apenas gestores podem ver as turmas.")),
+          );
+        }
+
+        if (escolaId == null) {
+          return const MainScaffold(
+            currentIndex: 2,
+            body: Center(child: Text("Gestor não vinculado a uma escola.")),
           );
         }
 
         return MainScaffold(
-          currentIndex: 3,
+          currentIndex: 2,
           body: StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
                 .collection('escolas')
