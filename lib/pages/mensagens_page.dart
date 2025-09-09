@@ -252,7 +252,7 @@ class MensagensPage extends StatelessWidget {
                       icon: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF4F46E5),
+                          color: const Color(0xFF00A74F),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Icon(Icons.add_comment, size: 22, color: Colors.white),
@@ -299,7 +299,8 @@ class MensagensPage extends StatelessWidget {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(
                         child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF4F46E5)),
+                          valueColor: AlwaysStoppedAnimation<Color>(Color(
+                              0xFF00A74F)),
                         ),
                       );
                     }
@@ -340,7 +341,7 @@ class MensagensPage extends StatelessWidget {
                               const SizedBox(height: 24),
                               ElevatedButton(
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF4F46E5),
+                                  backgroundColor: const Color(0xFF00A74F),
                                   foregroundColor: Colors.white,
                                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                                   shape: RoundedRectangleBorder(
@@ -422,12 +423,12 @@ class MensagensPage extends StatelessWidget {
                               width: 52,
                               height: 52,
                               decoration: BoxDecoration(
-                                color: const Color(0xFF4F46E5).withOpacity(0.1),
+                                color: const Color(0xFF00A74F).withOpacity(0.1),
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(
                                 Icons.person,
-                                color: const Color(0xFF4F46E5),
+                                color: const Color(0xFF00A74F),
                                 size: 24,
                               ),
                             ),
@@ -462,7 +463,7 @@ class MensagensPage extends StatelessWidget {
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   color: minhasNaoLidas > 0
-                                      ? const Color(0xFF4F46E5)
+                                      ? const Color(0xFF00A74F)
                                       : const Color(0xFF718096),
                                   fontWeight: minhasNaoLidas > 0 ? FontWeight.w500 : FontWeight.normal,
                                   fontSize: 14,
@@ -687,10 +688,10 @@ class _MensagensThreadPageState extends State<MensagensThreadPage> {
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF2D3748),
         elevation: 1,
-        iconTheme: const IconThemeData(color: Color(0xFF4F46E5)),
+        iconTheme: const IconThemeData(color: Color(0xFF00A74F)),
         actions: [
           PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert, color: Color(0xFF4F46E5)),
+            icon: const Icon(Icons.more_vert, color: Color(0xFF00A74F)),
             onSelected: (value) {
               if (value == 'delete') {
                 _deletarConversa(context);
@@ -725,7 +726,8 @@ class _MensagensThreadPageState extends State<MensagensThreadPage> {
                 if (!snapshot.hasData) {
                   return const Center(
                     child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF4F46E5)),
+                      valueColor: AlwaysStoppedAnimation<Color>(Color(
+                          0xFF00A74F)),
                     ),
                   );
                 }
@@ -759,13 +761,13 @@ class _MensagensThreadPageState extends State<MensagensThreadPage> {
                               width: 36,
                               height: 36,
                               decoration: BoxDecoration(
-                                color: const Color(0xFF4F46E5).withOpacity(0.1),
+                                color: const Color(0xFF00A74F).withOpacity(0.1),
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(
                                   Icons.person,
                                   size: 18,
-                                  color: const Color(0xFF4F46E5)
+                                  color: const Color(0xFF00A74F)
                               ),
                             ),
                           if (!isMe) const SizedBox(width: 8),
@@ -774,7 +776,7 @@ class _MensagensThreadPageState extends State<MensagensThreadPage> {
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                               decoration: BoxDecoration(
                                 color: isMe
-                                    ? const Color(0xFF4F46E5)
+                                    ? const Color(0xFF00A74F)
                                     : const Color(0xFFF7FAFC),
                                 borderRadius: BorderRadius.circular(18),
                                 boxShadow: [
@@ -794,7 +796,7 @@ class _MensagensThreadPageState extends State<MensagensThreadPage> {
                                       style: TextStyle(
                                         fontWeight: FontWeight.w600,
                                         fontSize: 12,
-                                        color: const Color(0xFF4F46E5),
+                                        color: const Color(0xFF00A74F),
                                       ),
                                     ),
                                   if (!isMe) const SizedBox(height: 4),
@@ -870,7 +872,7 @@ class _MensagensThreadPageState extends State<MensagensThreadPage> {
                 const SizedBox(width: 8),
                 Container(
                   decoration: const BoxDecoration(
-                    color: Color(0xFF4F46E5),
+                    color: Color(0xFF00A74F),
                     shape: BoxShape.circle,
                   ),
                   child: IconButton(

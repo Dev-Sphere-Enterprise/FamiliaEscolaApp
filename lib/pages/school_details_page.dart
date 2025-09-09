@@ -21,7 +21,7 @@ class SchoolDetailsPage extends StatelessWidget {
             color: Colors.white,
           ),
         ),
-        backgroundColor: const Color(0xFF4F46E5),
+        backgroundColor: const Color(0xFF00A74F),
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
@@ -61,7 +61,7 @@ class SchoolDetailsPage extends StatelessWidget {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF4F46E5)),
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00A74F)),
               ),
             );
           }
@@ -105,13 +105,13 @@ class SchoolDetailsPage extends StatelessWidget {
                         width: 60,
                         height: 60,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF4F46E5).withOpacity(0.1),
+                          color: const Color(0xFF00A74F).withOpacity(0.1),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
                           Icons.school,
                           size: 30,
-                          color: const Color(0xFF4F46E5),
+                          color: const Color(0xFF00A74F),
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -236,10 +236,10 @@ class SchoolDetailsPage extends StatelessWidget {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: const Color(0xFF4F46E5).withOpacity(0.1),
+            color: const Color(0xFF00A74F).withOpacity(0.1),
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, size: 20, color: const Color(0xFF4F46E5)),
+          child: Icon(icon, size: 20, color: const Color(0xFF00A74F)),
         ),
         title: Text(
           title,
