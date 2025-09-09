@@ -83,9 +83,10 @@ class _TurmaDetalhesPageState extends State<TurmaDetalhesPage> {
                   widget.turmaId)
                   .toList();
               final alunosDisponiveis = allStudents
-                  .where((doc) =>
-              (doc.data() as Map<String, dynamic>)['turmaId'] !=
-                  widget.turmaId)
+                  .where((doc) {
+                final data = doc.data() as Map<String, dynamic>;
+                return !data.containsKey('turmaId') || data['turmaId'] == null;
+              })
                   .toList();
 
               return Column(
