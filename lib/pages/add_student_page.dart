@@ -123,9 +123,12 @@ class _AddStudentPageState extends State<AddStudentPage> {
 
               TextFormField(
                 controller: _studentBirthDateCtrl,
+                readOnly: true,
+                onTap: _pickDate,
                 decoration: const InputDecoration(
                   labelText: "Data de Nascimento",
                   border: OutlineInputBorder(),
+                  suffixIcon: Icon(Icons.calendar_today),
                 ),
                 validator: (v) => v == null || v.isEmpty ? "Informe a data de nascimento" : null,
               ),
