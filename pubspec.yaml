@@ -21,11 +21,15 @@ dependencies:
   flutter_localizations:
     sdk: flutter
 
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_launcher_icons: ^0.13.1
   flutter_lints: ^5.0.0
+  integration_test:
+    sdk: flutter
+  mockito: ^5.4.4
+  build_runner: ^2.4.10
 
 flutter:
 

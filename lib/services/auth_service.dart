@@ -2,25 +2,31 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AuthService {
-  final _auth = FirebaseAuth.instance;
-  final _db = FirebaseFirestore.instance;
+  final FirebaseAuth _auth;
+  final FirebaseFirestore _db;
+
+  /// Construtor que permite a injeção de dependências para testes.
+  /// No aplicativo real, ele usará as instâncias padrão do Firebase.
+  AuthService({FirebaseAuth? auth, FirebaseFirestore? db})
+      : _auth = auth ?? FirebaseAuth.instance,
+        _db = db ?? FirebaseFirestore.instance;
 
   Stream<User?> get onAuthStateChanged => _auth.authStateChanges();
   User? get currentUser => _auth.currentUser;
 
-  // LOGIN
+  /// Realiza o login de um usuário com e-mail e senha.
   Future<UserCredential> signIn(String email, String senha) async {
     return await _auth.signInWithEmailAndPassword(email: email, password: senha);
   }
 
-  // REGISTRO genérico (responsável) — já com escolaId resolvido antes
+  /// Registra um novo usuário (geralmente um responsável).
   Future<UserCredential> signUp({
     required String nome,
     required String email,
     required String senha,
     required String cpf,
-    required String dataNascimento, // Adicionado para consistência
-    required String role, // 'responsavel'
+    required String dataNascimento,
+    required String role,
     required String escolaId,
   }) async {
     final cred = await _auth.createUserWithEmailAndPassword(email: email, password: senha);
@@ -28,7 +34,7 @@ class AuthService {
       'nome': nome,
       'email': email,
       'cpf': cpf,
-      'dataNascimento': dataNascimento, // Adicionado
+      'dataNascimento': dataNascimento,
       'role': role,
       'escolaId': escolaId,
       'createdAt': FieldValue.serverTimestamp(),
@@ -43,14 +49,13 @@ class AuthService {
     required String nomeGestor,
     required String email,
     required String cpf,
-    required String dataNascimento, // Parâmetro adicionado
+    required String dataNascimento,
     required String nomeEscola,
-    String? tipoEscola, // opcional
+    String? tipoEscola,
   }) async {
     final userRef = _db.collection('users').doc(uid);
     final escolaRef = _db.collection('escolas').doc();
 
-    // Usar um batch write garante que ambas as operações tenham sucesso ou falhem juntas.
     WriteBatch batch = _db.batch();
 
     // 1) Prepara a criação do documento do usuário (gestor)
@@ -58,9 +63,9 @@ class AuthService {
       'nome': nomeGestor,
       'email': email,
       'cpf': cpf,
-      'dataNascimento': dataNascimento, // Salva a data de nascimento
+      'dataNascimento': dataNascimento,
       'role': 'gestao',
-      'escolaId': escolaRef.id, // Já vincula o ID da futura escola
+      'escolaId': escolaRef.id, // Vincula o ID da futura escola
       'createdAt': FieldValue.serverTimestamp(),
     });
 
@@ -76,16 +81,19 @@ class AuthService {
     await batch.commit();
   }
 
+  /// Retorna um Stream com os dados do usuário logado.
   Stream<DocumentSnapshot<Map<String, dynamic>>>? getUserStream() {
     final uid = currentUser?.uid;
     if (uid == null) return null;
     return _db.collection('users').doc(uid).snapshots();
   }
 
+  /// Atualiza os dados de um usuário no Firestore.
   Future<void> updateUser(String uid, Map<String, dynamic> data) async {
     await _db.collection('users').doc(uid).update(data);
   }
 
+  /// Deleta a conta do usuário no Firestore e no Authentication.
   Future<void> deleteUserAccount() async {
     final user = currentUser;
     if (user == null) return;
@@ -93,17 +101,21 @@ class AuthService {
     try {
       await user.delete();
     } on FirebaseAuthException catch (e) {
+      // ignore: avoid_print
       print("Erro ao deletar conta de autenticação: ${e.message}");
     }
   }
 
+  /// Desloga o usuário atual.
   Future<void> signOut() => _auth.signOut();
 
+  /// Busca o perfil ('role') de um usuário pelo UID.
   Future<String?> getRole(String uid) async {
     final doc = await _db.collection('users').doc(uid).get();
     return doc.data()?['role'] as String?;
   }
 
+  /// Busca o ID da escola de um usuário pelo UID.
   Future<String?> getSchoolId(String uid) async {
     final doc = await _db.collection('users').doc(uid).get();
     return doc.data()?['escolaId'] as String?;
