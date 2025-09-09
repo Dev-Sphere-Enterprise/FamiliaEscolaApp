@@ -14,6 +14,31 @@ class _AdicionarAvisoPageState extends State<AdicionarAvisoPage> {
   final _mensagemCtrl = TextEditingController();
   bool _loading = false;
 
+  String _destino = "escola"; // escola | turma | aluno
+  List<String> _turmasSelecionadas = [];
+  List<String> _alunosSelecionados = [];
+
+  List<QueryDocumentSnapshot<Map<String, dynamic>>> _turmas = [];
+  List<QueryDocumentSnapshot<Map<String, dynamic>>> _alunos = [];
+
+  Future<void> _carregarDados(String escolaId) async {
+    // Buscar turmas
+    final turmasSnap = await FirebaseFirestore.instance
+        .collection("escolas")
+        .doc(escolaId)
+        .collection("turmas")
+        .get();
+    final alunosSnap = await FirebaseFirestore.instance
+        .collection("students")
+        .where("escolaId", isEqualTo: escolaId)
+        .get();
+
+    setState(() {
+      _turmas = turmasSnap.docs;
+      _alunos = alunosSnap.docs;
+    });
+  }
+
   Future<void> _salvarAviso() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
@@ -21,7 +46,7 @@ class _AdicionarAvisoPageState extends State<AdicionarAvisoPage> {
     setState(() => _loading = true);
 
     try {
-      // 🔎 Buscar o user logado para pegar a escolaId
+      // 🔎 Buscar user logado para pegar escolaId
       final userDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(uid)
@@ -44,16 +69,20 @@ class _AdicionarAvisoPageState extends State<AdicionarAvisoPage> {
         return;
       }
 
-      // ➕ Criar aviso já com a escolaId
+      // ➕ Criar aviso já com destino
       await FirebaseFirestore.instance.collection('avisos').add({
         'titulo': _tituloCtrl.text,
         'mensagem': _mensagemCtrl.text,
-        'data': DateTime.now(),
+        'data': FieldValue.serverTimestamp(),
         'lidoPor': [],
-        'escolaId': escolaId, // 🔗 vincula à escola
+        'escolaId': escolaId,
+        'criadoPor': uid,
+        'destino': _destino,
+        'turmaIds': _destino == "turma" ? _turmasSelecionadas : [],
+        'alunoIds': _destino == "aluno" ? _alunosSelecionados : [],
       });
 
-      Navigator.pop(context);
+      if (mounted) Navigator.pop(context);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Erro ao salvar aviso: $e")),
@@ -64,11 +93,24 @@ class _AdicionarAvisoPageState extends State<AdicionarAvisoPage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    // Buscar escolaId do gestor logado para carregar turmas/alunos
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      FirebaseFirestore.instance.collection("users").doc(uid).get().then((doc) {
+        final data = doc.data();
+        if (data != null && data["escolaId"] != null) {
+          _carregarDados(data["escolaId"]);
+        }
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Novo Aviso"),
-      ),
+      appBar: AppBar(title: const Text("Novo Aviso")),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -83,6 +125,66 @@ class _AdicionarAvisoPageState extends State<AdicionarAvisoPage> {
               decoration: const InputDecoration(labelText: "Mensagem"),
               maxLines: 4,
             ),
+            const SizedBox(height: 20),
+
+            DropdownButton<String>(
+              value: _destino,
+              items: const [
+                DropdownMenuItem(value: "escola", child: Text("Toda a Escola")),
+                DropdownMenuItem(value: "turma", child: Text("Turma específica")),
+                DropdownMenuItem(value: "aluno", child: Text("Aluno específico")),
+              ],
+              onChanged: (val) {
+                if (val != null) setState(() => _destino = val);
+              },
+            ),
+
+            if (_destino == "turma") Expanded(
+              child: ListView(
+                children: _turmas.map((doc) {
+                  final turmaId = doc.id;
+                  final nome = doc["nome"] ?? "Turma sem nome";
+                  final selected = _turmasSelecionadas.contains(turmaId);
+                  return CheckboxListTile(
+                    title: Text(nome),
+                    value: selected,
+                    onChanged: (val) {
+                      setState(() {
+                        if (val == true) {
+                          _turmasSelecionadas.add(turmaId);
+                        } else {
+                          _turmasSelecionadas.remove(turmaId);
+                        }
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+            ),
+
+            if (_destino == "aluno") Expanded(
+              child: ListView(
+                children: _alunos.map((doc) {
+                  final alunoId = doc.id;
+                  final nome = doc["nome"] ?? "Aluno sem nome";
+                  final selected = _alunosSelecionados.contains(alunoId);
+                  return CheckboxListTile(
+                    title: Text(nome),
+                    value: selected,
+                    onChanged: (val) {
+                      setState(() {
+                        if (val == true) {
+                          _alunosSelecionados.add(alunoId);
+                        } else {
+                          _alunosSelecionados.remove(alunoId);
+                        }
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+            ),
+
             const SizedBox(height: 20),
             _loading
                 ? const CircularProgressIndicator()
