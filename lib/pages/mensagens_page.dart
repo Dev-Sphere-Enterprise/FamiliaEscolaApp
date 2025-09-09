@@ -30,45 +30,95 @@ class MensagensPage extends StatelessWidget {
         .collection('conversas')
         .doc(pairId);
 
-    // pega dados dos usuários (para preencher info básica)
-    final meData = (await FirebaseFirestore.instance.collection('users').doc(meUid).get()).data() ?? {};
-    final otherData = (await FirebaseFirestore.instance.collection('users').doc(otherUid).get()).data() ?? {};
+    // pega dados do próprio usuário (sempre permitido)
+    final meData = (await FirebaseFirestore.instance
+        .collection('users')
+        .doc(meUid)
+        .get())
+        .data() ?? {};
+
+    Map<String, dynamic> otherData = {};
+
+    // só tenta buscar o outro se for gestor (tem permissão)
+    final meuRole = meData['role'] ?? '';
+    if (meuRole == 'gestao') {
+      otherData = (await FirebaseFirestore.instance
+          .collection('users')
+          .doc(otherUid)
+          .get())
+          .data() ?? {};
+    }
+
+    final otherNome = otherData['nome'] ?? 'Gestão';
+    final otherRole = otherData['role'] ?? 'gestao';
 
     await conversaRef.set({
       'escolaId': escolaId,
       'tipo': '1-1',
       'participantes': [meUid, otherUid],
       'participantesInfo': {
-        meUid: {'nome': meData['nome'] ?? 'Você', 'role': meData['role'] ?? ''},
-        otherUid: {'nome': otherData['nome'] ?? 'Contato', 'role': otherData['role'] ?? ''},
+        meUid: {'nome': meData['nome'] ?? 'Você', 'role': meuRole},
+        otherUid: {'nome': otherNome, 'role': otherRole},
       },
-      'titulo': otherData['nome'] ?? 'Conversa',
+      'titulo': otherNome,
       'ultimoTexto': '',
       'atualizadoEm': FieldValue.serverTimestamp(),
       'unread': {meUid: 0, otherUid: 0},
-    }, SetOptions(merge: true)); // 🔑 evita precisar de get()
+    }, SetOptions(merge: true));
 
     return conversaRef.id;
   }
 
   /// Para RESPONSÁVEL: encontra o gestor da escola e abre/cria o chat 1–1.
-  Future<void> _startChatWithGestor(BuildContext context, {
-    required String escolaId,
-    required String myUid,
-  }) async {
-    final escola = await FirebaseFirestore.instance.collection('escolas').doc(escolaId).get();
-    final gestorId = escola.data()?['gestorId'] as String?;
-    if (gestorId == null || gestorId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Escola sem gestor vinculado.')));
-      return;
-    }
+  /// Para RESPONSÁVEL: encontra o gestor da escola (direto no doc da escola)
+  /// e abre/cria o chat 1–1.
+  Future<void> _startChatWithGestor(
+      BuildContext context, {
+        required String escolaId,
+        required String myUid,
+      }) async {
+    try {
+      // Lê o doc da escola e pega o gestorId
+      final escolaDoc = await FirebaseFirestore.instance
+          .collection('escolas')
+          .doc(escolaId)
+          .get();
 
-    final conversaId = await _openOrCreate1to1(escolaId: escolaId, meUid: myUid, otherUid: gestorId);
+      final gestorId = escolaDoc.data()?['gestorId'] as String?;
+      if (gestorId == null || gestorId.isEmpty) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('⚠️ Escola sem gestor vinculado.')),
+          );
+        }
+        return;
+      }
 
-    if (context.mounted) {
-      Navigator.push(context, MaterialPageRoute(
-        builder: (_) => MensagensThreadPage(escolaId: escolaId, conversaId: conversaId),
-      ));
+      // Usa gestorId para abrir ou criar conversa
+      final conversaId = await _openOrCreate1to1(
+        escolaId: escolaId,
+        meUid: myUid,
+        otherUid: gestorId,
+      );
+
+      // Navega para a thread
+      if (context.mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MensagensThreadPage(
+              escolaId: escolaId,
+              conversaId: conversaId,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao iniciar conversa: $e')),
+        );
+      }
     }
   }
 
@@ -116,7 +166,7 @@ class MensagensPage extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
-                        color: Colors.deepPurple,
+                        color: Colors.indigo,
                       ),
                     ),
                     IconButton(
@@ -197,7 +247,7 @@ class MensagensPage extends StatelessWidget {
                               const SizedBox(height: 24),
                               ElevatedButton(
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.deepPurple,
+                                  backgroundColor: Colors.indigo,
                                   foregroundColor: Colors.white,
                                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                                   shape: RoundedRectangleBorder(
@@ -263,10 +313,10 @@ class MensagensPage extends StatelessWidget {
                             width: 56,
                             height: 56,
                             decoration: BoxDecoration(
-                              color: Colors.deepPurple[100],
+                              color: Colors.indigo[100],
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.person, color: Colors.deepPurple),
+                            child: const Icon(Icons.person, color: Colors.indigo),
                           ),
                           title: Row(
                             children: [
@@ -297,7 +347,7 @@ class MensagensPage extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                color: minhasNaoLidas > 0 ? Colors.deepPurple : Colors.grey[600],
+                                color: minhasNaoLidas > 0 ? Colors.indigo : Colors.grey[600],
                                 fontWeight: minhasNaoLidas > 0 ? FontWeight.w500 : FontWeight.normal,
                               ),
                             ),
@@ -487,7 +537,7 @@ class _MensagensThreadPageState extends State<MensagensThreadPage> {
           "Conversa",
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: Colors.indigo,
         foregroundColor: Colors.white,
         elevation: 1,
       ),
@@ -535,10 +585,10 @@ class _MensagensThreadPageState extends State<MensagensThreadPage> {
                               width: 36,
                               height: 36,
                               decoration: BoxDecoration(
-                                color: Colors.deepPurple[100],
+                                color: Colors.indigo[100],
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(Icons.person, size: 20, color: Colors.deepPurple),
+                              child: const Icon(Icons.person, size: 20, color: Colors.indigo),
                             ),
                           if (!isMe) const SizedBox(width: 8),
                           Flexible(
@@ -546,7 +596,7 @@ class _MensagensThreadPageState extends State<MensagensThreadPage> {
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                               decoration: BoxDecoration(
                                 color: isMe
-                                    ? Colors.deepPurple
+                                    ? Colors.indigo
                                     : Colors.grey[100],
                                 borderRadius: BorderRadius.circular(18),
                               ),
@@ -559,7 +609,7 @@ class _MensagensThreadPageState extends State<MensagensThreadPage> {
                                       style: TextStyle(
                                         fontWeight: FontWeight.w600,
                                         fontSize: 12,
-                                        color: Colors.deepPurple[700],
+                                        color: Colors.indigo[700],
                                       ),
                                     ),
                                   if (!isMe) const SizedBox(height: 4),
@@ -633,7 +683,7 @@ class _MensagensThreadPageState extends State<MensagensThreadPage> {
                 const SizedBox(width: 8),
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.deepPurple,
+                    color: Colors.indigo,
                     shape: BoxShape.circle,
                   ),
                   child: IconButton(
