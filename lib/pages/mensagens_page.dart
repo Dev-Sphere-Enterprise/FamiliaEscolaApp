@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
 import '../widgets/main_scaffold.dart';
 import 'selecionar_responsavel_page.dart';
 
@@ -102,99 +103,240 @@ class MensagensPage extends StatelessWidget {
 
         return MainScaffold(
           currentIndex: 3,
-          body: StreamBuilder<QuerySnapshot>(
-            stream: conversasStream,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              // Estado vazio com CTA
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text("Nenhuma conversa encontrada"),
-                      const SizedBox(height: 12),
-                      ElevatedButton.icon(
-                        icon: const Icon(Icons.chat),
-                        label: Text(role == 'gestao'
-                            ? 'Nova conversa (responsável)'
-                            : 'Conversar com a escola'),
-                        onPressed: () async {
-                          if (role == 'gestao') {
-                            // abre a lista de responsáveis
-                            final selected = await Navigator.push<Map<String, dynamic>?>(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => SelecionarResponsavelPage(escolaId: escolaId),
-                              ),
-                            );
-                            if (selected != null && selected['uid'] != null) {
-                              final conversaId = await _openOrCreate1to1(
-                                escolaId: escolaId,
-                                meUid: uid,
-                                otherUid: selected['uid'] as String,
-                              );
-                              if (context.mounted) {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => MensagensThreadPage(
-                                        escolaId: escolaId, conversaId: conversaId),
-                                  ),
-                                );
-                              }
-                            }
-                          } else {
-                            await _startChatWithGestor(context, escolaId: escolaId, myUid: uid);
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                );
-              }
-
-              // Lista de conversas
-              return ListView(
-                children: snapshot.data!.docs.map((doc) {
-                  final dados = doc.data() as Map<String, dynamic>;
-                  final ultimoTexto = (dados['ultimoTexto'] ?? '').toString();
-                  final unreadMap = Map<String, dynamic>.from(dados['unread'] ?? {});
-                  final int minhasNaoLidas = (unreadMap[uid] is int) ? unreadMap[uid] as int : 0;
-
-                  return ListTile(
-                    leading: const Icon(Icons.forum_outlined),
-                    title: Text(
-                      (dados['titulo'] ?? 'Conversa').toString(),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+          body: Column(
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      "Conversas",
                       style: TextStyle(
-                        fontWeight: minhasNaoLidas > 0 ? FontWeight.w700 : FontWeight.w500,
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.deepPurple,
                       ),
                     ),
-                    subtitle: Text(ultimoTexto, maxLines: 1, overflow: TextOverflow.ellipsis),
-                    trailing: minhasNaoLidas > 0
-                        ? Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(color: Colors.redAccent, borderRadius: BorderRadius.circular(12)),
-                      child: Text('$minhasNaoLidas', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    )
-                        : const SizedBox.shrink(),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => MensagensThreadPage(escolaId: escolaId, conversaId: doc.id),
+                    IconButton(
+                      icon: const Icon(Icons.add_comment, size: 28),
+                      onPressed: () async {
+                        if (role == 'gestao') {
+                          // abre a lista de responsáveis
+                          final selected = await Navigator.push<Map<String, dynamic>?>(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => SelecionarResponsavelPage(escolaId: escolaId),
+                            ),
+                          );
+                          if (selected != null && selected['uid'] != null) {
+                            final conversaId = await _openOrCreate1to1(
+                              escolaId: escolaId,
+                              meUid: uid,
+                              otherUid: selected['uid'] as String,
+                            );
+                            if (context.mounted) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => MensagensThreadPage(
+                                      escolaId: escolaId, conversaId: conversaId),
+                                ),
+                              );
+                            }
+                          }
+                        } else {
+                          await _startChatWithGestor(context, escolaId: escolaId, myUid: uid);
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
+              // Lista de conversas
+              Expanded(
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: conversasStream,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    // Estado vazio com CTA
+                    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(20.0),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.forum_outlined,
+                                size: 80,
+                                color: Colors.grey[300],
+                              ),
+                              const SizedBox(height: 16),
+                              const Text(
+                                "Nenhuma conversa",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                role == 'gestao'
+                                    ? 'Inicie uma conversa com um responsável'
+                                    : 'Entre em contato com a escola',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(color: Colors.grey),
+                              ),
+                              const SizedBox(height: 24),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.deepPurple,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                ),
+                                onPressed: () async {
+                                  if (role == 'gestao') {
+                                    // abre a lista de responsáveis
+                                    final selected = await Navigator.push<Map<String, dynamic>?>(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => SelecionarResponsavelPage(escolaId: escolaId),
+                                      ),
+                                    );
+                                    if (selected != null && selected['uid'] != null) {
+                                      final conversaId = await _openOrCreate1to1(
+                                        escolaId: escolaId,
+                                        meUid: uid,
+                                        otherUid: selected['uid'] as String,
+                                      );
+                                      if (context.mounted) {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => MensagensThreadPage(
+                                                escolaId: escolaId, conversaId: conversaId),
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  } else {
+                                    await _startChatWithGestor(context, escolaId: escolaId, myUid: uid);
+                                  }
+                                },
+                                child: Text(role == 'gestao' ? 'Nova conversa' : 'Conversar com a escola'),
+                              ),
+                            ],
+                          ),
                         ),
                       );
-                    },
-                  );
-                }).toList(),
-              );
-            },
+                    }
+
+                    // Lista de conversas
+                    return ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      itemCount: snapshot.data!.docs.length,
+                      separatorBuilder: (context, index) => const Divider(height: 1, indent: 72),
+                      itemBuilder: (context, index) {
+                        final doc = snapshot.data!.docs[index];
+                        final dados = doc.data() as Map<String, dynamic>;
+                        final ultimoTexto = (dados['ultimoTexto'] ?? '').toString();
+                        final unreadMap = Map<String, dynamic>.from(dados['unread'] ?? {});
+                        final int minhasNaoLidas = (unreadMap[uid] is int) ? unreadMap[uid] as int : 0;
+                        final atualizadoEm = (dados['atualizadoEm'] as Timestamp?)?.toDate();
+                        final timeStr = atualizadoEm != null
+                            ? DateFormat.Hm().format(atualizadoEm)
+                            : '';
+
+                        return ListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          leading: Container(
+                            width: 56,
+                            height: 56,
+                            decoration: BoxDecoration(
+                              color: Colors.deepPurple[100],
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.person, color: Colors.deepPurple),
+                          ),
+                          title: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  (dados['titulo'] ?? 'Conversa').toString(),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontWeight: minhasNaoLidas > 0 ? FontWeight.w700 : FontWeight.w500,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                timeStr,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                          subtitle: Padding(
+                            padding: const EdgeInsets.only(top: 4.0),
+                            child: Text(
+                              ultimoTexto,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: minhasNaoLidas > 0 ? Colors.deepPurple : Colors.grey[600],
+                                fontWeight: minhasNaoLidas > 0 ? FontWeight.w500 : FontWeight.normal,
+                              ),
+                            ),
+                          ),
+                          trailing: minhasNaoLidas > 0
+                              ? Container(
+                            width: 24,
+                            height: 24,
+                            decoration: const BoxDecoration(
+                              color: Colors.redAccent,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                              child: Text(
+                                '$minhasNaoLidas',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          )
+                              : null,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => MensagensThreadPage(escolaId: escolaId, conversaId: doc.id),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
         );
       },
@@ -219,12 +361,25 @@ class MensagensThreadPage extends StatefulWidget {
 class _MensagensThreadPageState extends State<MensagensThreadPage> {
   final _msgCtrl = TextEditingController();
   final _auth = FirebaseAuth.instance;
+  final _scrollController = ScrollController();
   bool _marcouLidasNaAbertura = false;
 
   @override
   void initState() {
     super.initState();
     _marcarConversaComoLida();
+    // Scroll para o final quando as mensagens carregarem
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _marcarConversaComoLida() async {
@@ -311,15 +466,31 @@ class _MensagensThreadPageState extends State<MensagensThreadPage> {
     });
 
     _msgCtrl.clear();
-  }
 
+    // Scroll para o final após enviar mensagem
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final uid = _auth.currentUser?.uid;
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Conversa")),
+      appBar: AppBar(
+        title: const Text(
+          "Conversa",
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        backgroundColor: Colors.deepPurple,
+        foregroundColor: Colors.white,
+        elevation: 1,
+      ),
       body: Column(
         children: [
           Expanded(
@@ -338,44 +509,88 @@ class _MensagensThreadPageState extends State<MensagensThreadPage> {
                 _marcarMensagensVisiveisComoLidas(mensagens.cast<QueryDocumentSnapshot>());
 
                 return ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  controller: _scrollController,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                   itemCount: mensagens.length,
                   itemBuilder: (context, index) {
                     final data = mensagens[index].data() as Map<String, dynamic>;
                     final autorId = (data["autorId"] ?? '') as String;
                     final autorNome = (data["autorNome"] ?? "Anônimo").toString();
                     final conteudo = (data["conteudo"] ?? "").toString();
+                    final timestamp = (data["data"] as Timestamp?)?.toDate();
+                    final timeStr = timestamp != null
+                        ? DateFormat.Hm().format(timestamp)
+                        : '';
                     final lidoPor = List<String>.from(data['lidoPor'] ?? []);
                     final isMe = autorId == uid;
                     final outrosLeram = lidoPor.any((x) => x != autorId);
 
-                    return Align(
-                      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: isMe ? Colors.blue.shade50 : Colors.grey.shade200,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                          children: [
-                            Text(autorNome, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
-                            const SizedBox(height: 4),
-                            Text(conteudo),
-                            const SizedBox(height: 6),
-                            if (isMe && outrosLeram)
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: const [
-                                  Icon(Icons.done_all, size: 14, color: Colors.blue),
-                                  SizedBox(width: 4),
-                                  Text("Lida", style: TextStyle(fontSize: 11, color: Colors.blue)),
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      child: Row(
+                        mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+                        children: [
+                          if (!isMe)
+                            Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: Colors.deepPurple[100],
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.person, size: 20, color: Colors.deepPurple),
+                            ),
+                          if (!isMe) const SizedBox(width: 8),
+                          Flexible(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: isMe
+                                    ? Colors.deepPurple
+                                    : Colors.grey[100],
+                                borderRadius: BorderRadius.circular(18),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (!isMe)
+                                    Text(
+                                      autorNome,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 12,
+                                        color: Colors.deepPurple[700],
+                                      ),
+                                    ),
+                                  if (!isMe) const SizedBox(height: 4),
+                                  Text(
+                                    conteudo,
+                                    style: TextStyle(
+                                      color: isMe ? Colors.white : Colors.black87,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        timeStr,
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: isMe ? Colors.white70 : Colors.grey[600],
+                                        ),
+                                      ),
+                                      if (isMe)
+                                        const SizedBox(width: 4),
+                                      if (isMe && outrosLeram)
+                                        const Icon(Icons.done_all, size: 14, color: Colors.white70),
+                                    ],
+                                  ),
                                 ],
                               ),
-                          ],
-                        ),
+                            ),
+                          ),
+                        ],
                       ),
                     );
                   },
@@ -383,26 +598,50 @@ class _MensagensThreadPageState extends State<MensagensThreadPage> {
               },
             ),
           ),
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Row(
-                children: [
-                  Expanded(
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              border: Border(top: BorderSide(color: Colors.grey[300]!)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
                     child: TextField(
                       controller: _msgCtrl,
                       decoration: const InputDecoration(
                         hintText: "Digite sua mensagem...",
-                        border: OutlineInputBorder(),
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       ),
                       onSubmitted: (_) => _enviarMensagem(),
                     ),
                   ),
-                  const SizedBox(width: 6),
-                  IconButton(icon: const Icon(Icons.send), onPressed: _enviarMensagem),
-                ],
-              ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.deepPurple,
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.send, color: Colors.white),
+                    onPressed: _enviarMensagem,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
