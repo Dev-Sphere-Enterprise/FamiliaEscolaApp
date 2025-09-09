@@ -4,50 +4,85 @@ import 'package:FamiliaEscolaApp/pages/turmas_page.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 import '../widgets/main_scaffold.dart';
 import 'add_student_page.dart';
 import 'avisos_page.dart';
 import 'responsaveis_page.dart';
 
-
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  @override
+  void initState() {
+    super.initState();
+    _initFCM();
+  }
+
+  Future<void> _initFCM() async {
+    final fcm = FirebaseMessaging.instance;
+
+    // Solicita permissão (iOS)
+    await fcm.requestPermission();
+
+    // Obtém o token para debug
+    final token = await fcm.getToken();
+    print("🔥 Token FCM: $token");
+
+    // Listener para foreground
+    FirebaseMessaging.onMessage.listen((msg) {
+      final notification = msg.notification;
+      if (notification != null && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(notification.title ?? "Nova notificação")),
+        );
+      }
+    });
+
+    // Listener para clique em notificação
+    FirebaseMessaging.onMessageOpenedApp.listen((msg) {
+      final data = msg.data;
+      if (data.containsKey("screen")) {
+        if (data["screen"] == "avisos") {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const AvisosPage()));
+        } else if (data["screen"] == "chat" && data["conversaId"] != null) {
+          Navigator.push(context, MaterialPageRoute(
+            builder: (_) => MensagensThreadPage(
+              escolaId: data["escolaId"],
+              conversaId: data["conversaId"],
+            ),
+          ));
+        }
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
-      // Se por algum motivo o usuário for nulo, volta para o AuthGate que resolverá.
-      // Isso evita erros se a HomePage for acessada indevidamente.
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     final uid = user.uid;
 
     return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .snapshots(),
+      stream: FirebaseFirestore.instance.collection('users').doc(uid).snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
 
-        // CORREÇÃO: Verifica se o snapshot não tem dados ou se o documento foi deletado.
-        // Se isso acontecer, desloga o usuário para que o AuthGate o redirecione para a tela de login.
         if (!snapshot.hasData || !snapshot.data!.exists) {
           FirebaseAuth.instance.signOut();
-          // Mostra um indicador de carregamento enquanto o signOut redireciona.
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
 
         final dados = snapshot.data!.data() as Map<String, dynamic>;
@@ -57,20 +92,20 @@ class HomePage extends StatelessWidget {
         final escolaId = dados['escolaId'];
 
         if (escolaId == null) {
-          return const Scaffold(
-            body: Center(child: Text("Usuário não vinculado a uma escola")),
-          );
+          return const Scaffold(body: Center(child: Text("Usuário não vinculado a uma escola")));
         }
 
+        // 🔔 Inscreve nos tópicos da escola
+        FirebaseMessaging.instance.subscribeToTopic("escola_$escolaId");
+
         return MainScaffold(
-          currentIndex: 2, // Home
+          currentIndex: 2,
           body: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  "Olá, $nomeUsuario!",
+                Text("Olá, $nomeUsuario!",
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 20,
@@ -308,9 +343,7 @@ class HomePage extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.grey[300],
           foregroundColor: Colors.black,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
         icon: Icon(icon),
         label: Text(text),
