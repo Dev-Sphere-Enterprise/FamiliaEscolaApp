@@ -37,7 +37,6 @@ class AvisosPage extends StatelessWidget {
         final userData = userSnapshot.data!.data() ?? {};
         final role = (userData['role'] ?? 'responsavel') as String;
         final escolaId = userData['escolaId'] as String?;
-        final cpf = userData['cpf'] as String?; // importante p/ buscar alunos
 
         if (escolaId == null || escolaId.isEmpty) {
           return const Scaffold(
@@ -50,71 +49,10 @@ class AvisosPage extends StatelessWidget {
             .where('escolaId', isEqualTo: escolaId)
             .orderBy('data', descending: true);
 
-        // Gestão: lista direta (sem filtro extra por aluno/turma)
-        if (role == 'gestao') {
-          return _ScaffoldAvisos(
-            role: role,
-            uid: uid,
-            avisosQuery: avisosQuery,
-            filtro: null, // mostra todos
-          );
-        }
-
-        // Responsável: buscar alunos vinculados a este CPF na escola
-        // (conforme suas regras e modelo: students.escolaId + students.responsibleCpf)
-        final alunosStream = FirebaseFirestore.instance
-            .collection('students')
-            .where('escolaId', isEqualTo: escolaId)
-            .where('responsibleCpf', isEqualTo: cpf)
-            .snapshots();
-
-        return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: alunosStream,
-          builder: (context, alunosSnap) {
-            if (alunosSnap.connectionState == ConnectionState.waiting) {
-              return const Scaffold(body: Center(child: CircularProgressIndicator()));
-            }
-            if (!alunosSnap.hasData) {
-              return const Scaffold(body: Center(child: Text("Carregando alunos...")));
-            }
-
-            // Conjuntos com IDs dos alunos e turmas do responsável
-            final alunoIds = <String>{};
-            final turmaIds = <String>{};
-
-            for (final d in alunosSnap.data!.docs) {
-              alunoIds.add(d.id);
-              final data = d.data();
-              // tenta pegar turmaId (ou lista, se você usar)
-              final tId = data['turmaId'];
-              if (tId is String && tId.isNotEmpty) turmaIds.add(tId);
-              final tList = data['turmaIds'];
-              if (tList is List) {
-                for (final t in tList) {
-                  if (t is String && t.isNotEmpty) turmaIds.add(t);
-                }
-              }
-            }
-
-            return _ScaffoldAvisos(
-              role: role,
-              uid: uid,
-              avisosQuery: avisosQuery,
-              filtro: (aviso) {
-                final destino = aviso['destino'] ?? 'escola';
-                if (destino == 'escola') return true;
-                if (destino == 'turma') {
-                  final alvo = List<String>.from(aviso['turmaIds'] ?? const []);
-                  return alvo.any(turmaIds.contains);
-                }
-                if (destino == 'aluno') {
-                  final alvo = List<String>.from(aviso['alunoIds'] ?? const []);
-                  return alvo.any(alunoIds.contains);
-                }
-                return false;
-              },
-            );
-          },
+        return _ScaffoldAvisos(
+          role: role,
+          uid: uid,
+          avisosQuery: avisosQuery,
         );
       },
     );
@@ -125,13 +63,11 @@ class _ScaffoldAvisos extends StatelessWidget {
   final String role;
   final String uid;
   final Query<Map<String, dynamic>> avisosQuery;
-  final bool Function(Map<String, dynamic> aviso)? filtro;
 
   const _ScaffoldAvisos({
     required this.role,
     required this.uid,
     required this.avisosQuery,
-    required this.filtro,
   });
 
   String _fmtData(Timestamp? ts) {
@@ -152,108 +88,91 @@ class _ScaffoldAvisos extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            final msg = snapshot.error.toString();
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text("Erro ao carregar avisos:\n$msg"),
-              ),
-            );
+            return Center(child: Text("Erro: ${snapshot.error}"));
           }
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return const Center(child: Text("Nenhum aviso disponível"));
           }
 
-          // aplica filtro se necessário (responsável)
-          final filtered = filtro == null
-              ? snapshot.data!.docs
-              : snapshot.data!.docs.where((d) => filtro!(d.data())).toList();
-
-          if (filtered.isEmpty) {
-            return const Center(child: Text("Nenhum aviso disponível para você"));
-          }
+          final avisos = snapshot.data!.docs;
 
           return ListView.builder(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: filtered.length,
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+            itemCount: avisos.length,
             itemBuilder: (context, i) {
-              final doc = filtered[i];
+              final doc = avisos[i];
               final aviso = doc.data();
               final lidoPor = List<String>.from(aviso['lidoPor'] ?? []);
               final jaLido = lidoPor.contains(uid);
 
-              final destino = (aviso['destino'] ?? 'escola') as String;
-              String destinoLabel = 'Escola';
-              IconData destinoIcon = Icons.campaign;
-              if (destino == 'turma') {
-                final count = (aviso['turmaIds'] is List) ? (aviso['turmaIds'] as List).length : 0;
-                destinoLabel = count > 0 ? 'Turmas ($count)' : 'Turmas';
-                destinoIcon = Icons.class_;
-              } else if (destino == 'aluno') {
-                final count = (aviso['alunoIds'] is List) ? (aviso['alunoIds'] as List).length : 0;
-                destinoLabel = count > 0 ? 'Alunos ($count)' : 'Alunos';
-                destinoIcon = Icons.person;
-              }
-
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                elevation: jaLido ? 0 : 1.5,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: jaLido ? Colors.grey.shade300 : Colors.blue.shade300,
+                    width: 1.5,
+                  ),
+                  color: Colors.white,
+                  boxShadow: [
+                    if (!jaLido)
+                      BoxShadow(
+                        color: Colors.blue.shade100.withOpacity(0.4),
+                        blurRadius: 6,
+                        offset: const Offset(0, 3),
+                      )
+                  ],
+                ),
                 child: ListTile(
-                  isThreeLine: true, // ✅ dá altura suficiente
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  leading: Icon(destinoIcon),
+                  contentPadding: const EdgeInsets.all(12),
+                  leading: CircleAvatar(
+                    backgroundColor: Colors.blue.shade50,
+                    child: const Icon(Icons.campaign, color: Colors.blue),
+                  ),
                   title: Text(
                     (aviso['titulo'] ?? '').toString(),
-                    maxLines: 1, // ✅ evita estourar horizontalmente
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontWeight: jaLido ? FontWeight.w500 : FontWeight.w700,
+                      fontSize: 16,
+                      color: jaLido ? Colors.black87 : Colors.blue.shade700,
                     ),
                   ),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min, // ✅ altura sob controle
                     children: [
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
                       Text(
                         (aviso['mensagem'] ?? '').toString(),
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,
-                        softWrap: true,
-                        style: const TextStyle(height: 1.25),
+                        style: TextStyle(
+                          height: 1.3,
+                          color: Colors.grey.shade800,
+                        ),
                       ),
-                      const SizedBox(height: 6),
-                      Wrap( // ✅ quebra linha se faltar espaço
-                        spacing: 8,
-                        runSpacing: 4,
-                        crossAxisAlignment: WrapCrossAlignment.center,
+                      const SizedBox(height: 8),
+                      Row(
                         children: [
                           Icon(Icons.schedule, size: 16, color: Colors.grey[600]),
+                          const SizedBox(width: 4),
                           Text(
                             _fmtData(aviso['data'] as Timestamp?),
                             style: TextStyle(fontSize: 12, color: Colors.grey[700]),
                           ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.black12,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
+                          const Spacer(),
+                          if (role == 'gestao')
+                            Row(
                               children: [
-                                Icon(destinoIcon, size: 14),
+                                const Icon(Icons.visibility, size: 16, color: Colors.grey),
                                 const SizedBox(width: 4),
-                                Text(destinoLabel, style: const TextStyle(fontSize: 12)),
+                                Text(
+                                  "${lidoPor.length} leram",
+                                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                ),
                               ],
                             ),
-                          ),
-                          if (role == 'gestao') ...[
-                            const SizedBox(width: 8),
-                            const Icon(Icons.visibility, size: 16),
-                            Text('${lidoPor.length} leram', style: const TextStyle(fontSize: 12)),
-                          ],
                         ],
                       ),
                     ],
@@ -264,6 +183,7 @@ class _ScaffoldAvisos extends StatelessWidget {
                       jaLido ? Icons.check_circle : Icons.mark_email_unread,
                       color: jaLido ? Colors.green : Colors.red,
                     ),
+                    tooltip: jaLido ? "Aviso já lido" : "Marcar como lido",
                     onPressed: jaLido
                         ? null
                         : () async {
@@ -271,53 +191,17 @@ class _ScaffoldAvisos extends StatelessWidget {
                         await FirebaseFirestore.instance
                             .collection('avisos')
                             .doc(doc.id)
-                            .update({'lidoPor': FieldValue.arrayUnion([uid])});
-                      } on FirebaseException catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: Text(
-                            e.code == 'permission-denied'
-                                ? "Sem permissão para marcar como lido."
-                                : "Erro: ${e.code}",
-                          ),
-                        ));
+                            .update({
+                          'lidoPor': FieldValue.arrayUnion([uid])
+                        });
                       } catch (e) {
-                        ScaffoldMessenger.of(context)
-                            .showSnackBar(SnackBar(content: Text("Erro: $e")));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text("Erro: $e")),
+                        );
                       }
                     },
                   )
-                      : PopupMenuButton<String>(
-                    onSelected: (value) async {
-                      if (value == 'edit') {
-                        _showNovoAvisoDialog(
-                          context,
-                          escolaId: aviso['escolaId'],
-                          isEdit: true,
-                          docId: doc.id,
-                          dados: aviso,
-                        );
-                      } else if (value == 'delete') {
-                        try {
-                          await FirebaseFirestore.instance
-                              .collection('avisos')
-                              .doc(doc.id)
-                              .delete();
-                        } on FirebaseException catch (e) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text("Erro: ${e.code}")),
-                          );
-                        } catch (e) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text("Erro: $e")),
-                          );
-                        }
-                      }
-                    },
-                    itemBuilder: (context) => const <PopupMenuEntry<String>>[
-                      PopupMenuItem(value: 'edit', child: Text("Editar")),
-                      PopupMenuItem(value: 'delete', child: Text("Excluir")),
-                    ],
-                  ),
+                      : null,
                 ),
               );
             },
@@ -337,101 +221,5 @@ class _ScaffoldAvisos extends StatelessWidget {
           : null,
     );
   }
-
-  void _showNovoAvisoDialog(
-      BuildContext context, {
-        required String escolaId,
-        bool isEdit = false,
-        String? docId,
-        Map<String, dynamic>? dados,
-      }) {
-    final tituloCtrl = TextEditingController(text: dados?['titulo'] ?? '');
-    final mensagemCtrl = TextEditingController(text: dados?['mensagem'] ?? '');
-    bool saving = false;
-
-    showDialog(
-      context: context,
-      builder: (_) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: Text(isEdit ? "Editar Aviso" : "Novo Aviso"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: tituloCtrl,
-                decoration: const InputDecoration(labelText: "Título"),
-              ),
-              TextField(
-                controller: mensagemCtrl,
-                decoration: const InputDecoration(labelText: "Mensagem"),
-                maxLines: 3,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: saving ? null : () => Navigator.pop(context),
-              child: const Text("Cancelar"),
-            ),
-            ElevatedButton(
-              onPressed: saving
-                  ? null
-                  : () async {
-                final titulo = tituloCtrl.text.trim();
-                final mensagem = mensagemCtrl.text.trim();
-
-                if (titulo.isEmpty || mensagem.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Preencha título e mensagem.")),
-                  );
-                  return;
-                }
-
-                setState(() => saving = true);
-                try {
-                  if (isEdit && docId != null) {
-                    await FirebaseFirestore.instance.collection('avisos').doc(docId).update({
-                      'titulo': titulo,
-                      'mensagem': mensagem,
-                      'updatedAt': FieldValue.serverTimestamp(),
-                    });
-                  } else {
-                    await FirebaseFirestore.instance.collection('avisos').add({
-                      'titulo': titulo,
-                      'mensagem': mensagem,
-                      'data': FieldValue.serverTimestamp(),
-                      'lidoPor': [],
-                      'escolaId': escolaId,
-                      'createdAt': FieldValue.serverTimestamp(),
-                      'destino': 'escola',
-                      'turmaIds': [],
-                      'alunoIds': [],
-                    });
-                  }
-                  if (context.mounted) Navigator.pop(context);
-                } on FirebaseException catch (e) {
-                  final msg = (e.code == 'permission-denied')
-                      ? "Sem permissão para salvar avisos."
-                      : (e.code == 'failed-precondition'
-                      ? "Crie o índice no Firestore (where escolaId + orderBy data)."
-                      : "Erro: ${e.code}");
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Erro: $e")),
-                  );
-                } finally {
-                  setState(() => saving = false);
-                }
-              },
-              child: saving
-                  ? const SizedBox(
-                  height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Text("Salvar"),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
+

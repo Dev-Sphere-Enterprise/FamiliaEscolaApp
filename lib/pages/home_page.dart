@@ -81,32 +81,52 @@ class HomePage extends StatelessWidget {
                   child: StreamBuilder<QuerySnapshot>(
                     stream: FirebaseFirestore.instance
                         .collection('avisos')
-                        .where('escolaId', isEqualTo: escolaId) // 🔎 só da escola
+                        .where('escolaId', isEqualTo: escolaId)
                         .orderBy('data', descending: true)
-                        .limit(4)
+                        .limit(20) // pega um número razoável
                         .snapshots(),
                     builder: (context, avisoSnapshot) {
-                      if (avisoSnapshot.connectionState ==
-                          ConnectionState.waiting) {
-                        return const Center(
-                            child: CircularProgressIndicator());
+                      if (avisoSnapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
                       }
 
-                      if (!avisoSnapshot.hasData ||
-                          avisoSnapshot.data!.docs.isEmpty) {
-                        return const Center(
-                            child: Text("Nenhum aviso disponível"));
+                      if (!avisoSnapshot.hasData || avisoSnapshot.data!.docs.isEmpty) {
+                        return const Center(child: Text("Nenhum aviso disponível"));
                       }
 
-                      final avisos = avisoSnapshot.data!.docs;
+                      var docs = avisoSnapshot.data!.docs;
 
-                      // 🔎 contar não lidos (só para responsável)
+                      // 🔎 Se for responsável, filtra aqui
+                      if (tipoPerfil == 'responsavel') {
+                        final turmaId = dados['turmaId'] as String?;
+                        final alunoId = dados['alunoId'] as String?;
+
+                        docs = docs.where((d) {
+                          final aviso = d.data() as Map<String, dynamic>;
+                          final destino = aviso['destino'] ?? 'escola';
+                          if (destino == 'escola') return true;
+                          if (destino == 'turma') {
+                            final turmas = List<String>.from(aviso['turmaIds'] ?? []);
+                            return turmaId != null && turmas.contains(turmaId);
+                          }
+                          if (destino == 'aluno') {
+                            final alunos = List<String>.from(aviso['alunoIds'] ?? []);
+                            return alunoId != null && alunos.contains(alunoId);
+                          }
+                          return false;
+                        }).toList();
+                      }
+
+                      if (docs.isEmpty) {
+                        return const Center(child: Text("Nenhum aviso disponível para você"));
+                      }
+
+                      // 🔎 contar não lidos
                       int naoLidos = 0;
                       if (tipoPerfil == 'responsavel') {
-                        for (var aviso in avisos) {
-                          final data = aviso.data() as Map<String, dynamic>;
-                          final lidoPor =
-                          List<String>.from(data['lidoPor'] ?? []);
+                        for (var d in docs) {
+                          final aviso = d.data() as Map<String, dynamic>;
+                          final lidoPor = List<String>.from(aviso['lidoPor'] ?? []);
                           if (!lidoPor.contains(uid)) {
                             naoLidos++;
                           }
@@ -123,24 +143,16 @@ class HomePage extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
-                              mainAxisAlignment:
-                              MainAxisAlignment.spaceBetween,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 const Text(
                                   "Quadro de Avisos",
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                                 ),
-                                if (tipoPerfil == 'responsavel' &&
-                                    naoLidos > 0)
+                                if (tipoPerfil == 'responsavel' && naoLidos > 0)
                                   Text(
                                     "🔴 $naoLidos novos",
-                                    style: const TextStyle(
-                                      color: Colors.red,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                    style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
                                   ),
                               ],
                             ),
@@ -148,58 +160,41 @@ class HomePage extends StatelessWidget {
 
                             Expanded(
                               child: ListView.builder(
-                                itemCount: avisos.length,
+                                itemCount: docs.length,
                                 itemBuilder: (context, index) {
-                                  final aviso = avisos[index].data()
-                                  as Map<String, dynamic>;
-                                  final titulo =
-                                      aviso['titulo'] ?? "Sem título";
+                                  final aviso = docs[index].data() as Map<String, dynamic>;
+                                  final titulo = aviso['titulo'] ?? "Sem título";
                                   final mensagem = aviso['mensagem'] ?? "";
-                                  final data =
-                                  (aviso['data'] as Timestamp?)?.toDate();
+                                  final data = (aviso['data'] as Timestamp?)?.toDate();
 
                                   bool jaLido = true;
                                   if (tipoPerfil == 'responsavel') {
-                                    final lidoPor = List<String>.from(
-                                        aviso['lidoPor'] ?? []);
+                                    final lidoPor = List<String>.from(aviso['lidoPor'] ?? []);
                                     jaLido = lidoPor.contains(uid);
                                   }
 
                                   return Card(
                                     color: (tipoPerfil == 'responsavel')
-                                        ? (jaLido
-                                        ? Colors.white
-                                        : Colors.amber[100])
+                                        ? (jaLido ? Colors.white : Colors.amber[100])
                                         : Colors.white,
-                                    margin: const EdgeInsets.symmetric(
-                                        vertical: 4),
+                                    margin: const EdgeInsets.symmetric(vertical: 4),
                                     child: ListTile(
                                       title: Text(
                                         titulo,
                                         style: TextStyle(
-                                          fontWeight: (tipoPerfil ==
-                                              'responsavel' &&
-                                              !jaLido)
+                                          fontWeight: (tipoPerfil == 'responsavel' && !jaLido)
                                               ? FontWeight.bold
                                               : FontWeight.normal,
                                         ),
                                       ),
                                       subtitle: Column(
-                                        crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Text(
-                                            mensagem,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
+                                          Text(mensagem, maxLines: 1, overflow: TextOverflow.ellipsis),
                                           if (data != null)
                                             Text(
                                               "${data.day}/${data.month}/${data.year}",
-                                              style: const TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.grey,
-                                              ),
+                                              style: const TextStyle(fontSize: 12, color: Colors.grey),
                                             ),
                                         ],
                                       ),
@@ -215,9 +210,7 @@ class HomePage extends StatelessWidget {
                                 onPressed: () {
                                   Navigator.push(
                                     context,
-                                    MaterialPageRoute(
-                                      builder: (_) => const AvisosPage(),
-                                    ),
+                                    MaterialPageRoute(builder: (_) => const AvisosPage()),
                                   );
                                 },
                                 child: const Text("Ver todos"),
@@ -229,6 +222,7 @@ class HomePage extends StatelessWidget {
                     },
                   ),
                 ),
+
 
                 const SizedBox(height: 16),
 
