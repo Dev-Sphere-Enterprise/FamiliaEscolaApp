@@ -3,6 +3,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'auth_gate.dart';              // <- use este
 import 'pages/splash_page.dart';     // <- se quiser abrir com splash
+import 'package:flutter_localizations/flutter_localizations.dart';
+
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,7 +26,16 @@ class FamiliaEscolaApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1E88E5)),
         useMaterial3: true,
       ),
-      // Se quiser splash primeiro, use SplashPage(); senão, vá direto pro AuthGate();
+      // 🔑 adiciona suporte a traduções
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('pt', 'BR'), // 🇧🇷
+        Locale('en', 'US'), // 🇺🇸 fallback
+      ],
       home: const SplashPage(),
       // home: const AuthGate(),
     );
