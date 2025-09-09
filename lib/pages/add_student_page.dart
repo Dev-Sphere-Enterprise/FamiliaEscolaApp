@@ -17,6 +17,7 @@ class _AddStudentPageState extends State<AddStudentPage> {
   final _responsibleNameCtrl = TextEditingController();
   final _responsibleCpfCtrl = TextEditingController();
 
+  DateTime? _birthDate; // ✅ guarda a data real
   bool _loading = false;
 
   @override
@@ -30,6 +31,12 @@ class _AddStudentPageState extends State<AddStudentPage> {
 
   Future<void> _addStudent() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_birthDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Selecione a data de nascimento")),
+      );
+      return;
+    }
 
     setState(() => _loading = true);
 
@@ -37,14 +44,14 @@ class _AddStudentPageState extends State<AddStudentPage> {
       final uid = FirebaseAuth.instance.currentUser?.uid;
       if (uid == null) throw Exception("Usuário não autenticado");
 
-      // pega a escola do gestor logado
       final userDoc = await FirebaseFirestore.instance.collection("users").doc(uid).get();
       final escolaId = userDoc.data()?["escolaId"];
       if (escolaId == null) throw Exception("Gestor não vinculado a nenhuma escola");
 
       await FirebaseFirestore.instance.collection("students").add({
         "nome": _studentNameCtrl.text.trim(),
-        "dataNascimento": _studentBirthDateCtrl.text.trim(),
+        // ✅ salva como Timestamp no Firestore
+        "dataNascimento": Timestamp.fromDate(_birthDate!),
         "responsibleName": _responsibleNameCtrl.text.trim(),
         "responsibleCpf": _responsibleCpfCtrl.text.trim(),
         "escolaId": escolaId,
@@ -77,7 +84,9 @@ class _AddStudentPageState extends State<AddStudentPage> {
       locale: const Locale("pt", "BR"),
     );
     if (picked != null) {
-      _studentBirthDateCtrl.text = "${picked.day}/${picked.month}/${picked.year}";
+      _birthDate = picked; // ✅ guarda para salvar no Firestore
+      _studentBirthDateCtrl.text =
+      "${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}";
     }
   }
 
@@ -86,6 +95,7 @@ class _AddStudentPageState extends State<AddStudentPage> {
     if (value.length != 11) return "CPF deve ter 11 dígitos";
     return null;
   }
+
 
   @override
   Widget build(BuildContext context) {

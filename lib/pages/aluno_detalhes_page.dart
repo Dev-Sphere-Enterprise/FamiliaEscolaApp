@@ -18,9 +18,22 @@ class AlunoDetalhesPage extends StatelessWidget {
 
   void _editarAluno(
       BuildContext context, String alunoId, Map<String, dynamic> aluno) {
+    // Nome
     final nomeCtrl = TextEditingController(text: aluno['nome'] ?? "");
-    final nascimentoCtrl =
-    TextEditingController(text: aluno['dataNascimento'] ?? "");
+
+    // Data de nascimento (pode ser Timestamp ou String)
+    String nascimentoStr = "";
+    final nascimento = aluno['dataNascimento'];
+    if (nascimento is Timestamp) {
+      final dt = nascimento.toDate();
+      nascimentoStr =
+      "${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}";
+    } else if (nascimento is String) {
+      nascimentoStr = nascimento;
+    }
+    final nascimentoCtrl = TextEditingController(text: nascimentoStr);
+
+    // Responsável
     final respNomeCtrl =
     TextEditingController(text: aluno['responsibleName'] ?? "");
     final respCpfCtrl =
@@ -73,7 +86,7 @@ class AlunoDetalhesPage extends StatelessWidget {
                   .doc(alunoId)
                   .update({
                 "nome": nomeCtrl.text.trim(),
-                "dataNascimento": nascimentoCtrl.text.trim(),
+                "dataNascimento": nascimentoCtrl.text.trim(), // ⚠️ continua salvando como String
                 "responsibleName": respNomeCtrl.text.trim(),
                 "responsibleCpf": respCpfCtrl.text.trim(),
               });
@@ -164,6 +177,17 @@ class AlunoDetalhesPage extends StatelessWidget {
               final escolaId = aluno['escolaId'];
               final turmaId = aluno['turmaId'];
 
+              // ✅ trata dataNascimento
+              String nascimentoStr = "---";
+              final nascimento = aluno['dataNascimento'];
+              if (nascimento is Timestamp) {
+                final dt = nascimento.toDate();
+                nascimentoStr =
+                "${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}";
+              } else if (nascimento is String) {
+                nascimentoStr = nascimento;
+              }
+
               return ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
@@ -186,8 +210,7 @@ class AlunoDetalhesPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
 
-                  _infoCard(Icons.cake, "Data de Nascimento",
-                      aluno['dataNascimento'] ?? "---"),
+                  _infoCard(Icons.cake, "Data de Nascimento", nascimentoStr),
                   _infoCard(Icons.family_restroom, "Responsável",
                       aluno['responsibleName'] ?? "---"),
                   _infoCard(Icons.badge, "CPF do Responsável",
@@ -224,16 +247,18 @@ class AlunoDetalhesPage extends StatelessWidget {
                       builder: (context, turmaSnapshot) {
                         if (turmaSnapshot.connectionState ==
                             ConnectionState.waiting) {
-                          return _infoCard(Icons.group, "Turma", "Carregando...");
+                          return _infoCard(
+                              Icons.group, "Turma", "Carregando...");
                         }
                         if (turmaSnapshot.hasData &&
                             turmaSnapshot.data!.exists) {
-                          final turmaData = turmaSnapshot.data!.data()
-                          as Map<String, dynamic>;
-                          return _infoCard(
-                              Icons.group, "Turma", turmaData['nome'] ?? "---");
+                          final turmaData =
+                          turmaSnapshot.data!.data() as Map<String, dynamic>;
+                          return _infoCard(Icons.group, "Turma",
+                              turmaData['nome'] ?? "---");
                         }
-                        return _infoCard(Icons.group, "Turma", "Não matriculado");
+                        return _infoCard(
+                            Icons.group, "Turma", "Não matriculado");
                       },
                     )
                   else
