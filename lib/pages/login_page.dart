@@ -149,6 +149,7 @@ class _LoginPageState extends State<LoginPage> {
                         child: Column(
                           children: [
                             TextFormField(
+                              key: const Key('email_field'),
                               controller: _emailCtrl,
                               keyboardType: TextInputType.emailAddress,
                               autofillHints: const [AutofillHints.username],
@@ -169,6 +170,7 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                             const SizedBox(height: 12),
                             TextFormField(
+                              key: const Key('password_field'),
                               controller: _passCtrl,
                               autofillHints: const [AutofillHints.password],
                               obscureText: _obscure,
