@@ -4,50 +4,52 @@ import 'package:FamiliaEscolaApp/pages/turmas_page.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 import '../widgets/main_scaffold.dart';
 import 'add_student_page.dart';
 import 'avisos_page.dart';
 import 'responsaveis_page.dart';
 
-
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  String? _escolaId;
+
+  // Helper: inscreve no tópico da escola (chamado a cada build, mas só executa se mudar)
+  void _subscribeToSchoolTopic(String escolaId) {
+    if (_escolaId != escolaId) {
+      _escolaId = escolaId;
+      FirebaseMessaging.instance.subscribeToTopic("escola_$escolaId");
+      print("📱 Inscrito no tópico: escola_$escolaId");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
-      // Se por algum motivo o usuário for nulo, volta para o AuthGate que resolverá.
-      // Isso evita erros se a HomePage for acessada indevidamente.
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     final uid = user.uid;
 
     return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .snapshots(),
+      stream: FirebaseFirestore.instance.collection('users').doc(uid).snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
 
-        // CORREÇÃO: Verifica se o snapshot não tem dados ou se o documento foi deletado.
-        // Se isso acontecer, desloga o usuário para que o AuthGate o redirecione para a tela de login.
         if (!snapshot.hasData || !snapshot.data!.exists) {
           FirebaseAuth.instance.signOut();
-          // Mostra um indicador de carregamento enquanto o signOut redireciona.
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
 
         final dados = snapshot.data!.data() as Map<String, dynamic>;
@@ -57,13 +59,14 @@ class HomePage extends StatelessWidget {
         final escolaId = dados['escolaId'];
 
         if (escolaId == null) {
-          return const Scaffold(
-            body: Center(child: Text("Usuário não vinculado a uma escola")),
-          );
+          return const Scaffold(body: Center(child: Text("Usuário não vinculado a uma escola")));
         }
 
+        // 🔔 Inscreve nos tópicos da escola (apenas 1 vez por usuário)
+        _subscribeToSchoolTopic(escolaId);
+
         return MainScaffold(
-          currentIndex: 2, // Home
+          currentIndex: 2,
           body: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -84,21 +87,17 @@ class HomePage extends StatelessWidget {
                   child: StreamBuilder<QuerySnapshot>(
                     stream: FirebaseFirestore.instance
                         .collection('avisos')
-                        .where('escolaId', isEqualTo: escolaId) // 🔎 só da escola
+                        .where('escolaId', isEqualTo: escolaId)
                         .orderBy('data', descending: true)
                         .limit(4)
                         .snapshots(),
                     builder: (context, avisoSnapshot) {
-                      if (avisoSnapshot.connectionState ==
-                          ConnectionState.waiting) {
-                        return const Center(
-                            child: CircularProgressIndicator());
+                      if (avisoSnapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
                       }
 
-                      if (!avisoSnapshot.hasData ||
-                          avisoSnapshot.data!.docs.isEmpty) {
-                        return const Center(
-                            child: Text("Nenhum aviso disponível"));
+                      if (!avisoSnapshot.hasData || avisoSnapshot.data!.docs.isEmpty) {
+                        return const Center(child: Text("Nenhum aviso disponível"));
                       }
 
                       final avisos = avisoSnapshot.data!.docs;
@@ -108,8 +107,7 @@ class HomePage extends StatelessWidget {
                       if (tipoPerfil == 'responsavel') {
                         for (var aviso in avisos) {
                           final data = aviso.data() as Map<String, dynamic>;
-                          final lidoPor =
-                          List<String>.from(data['lidoPor'] ?? []);
+                          final lidoPor = List<String>.from(data['lidoPor'] ?? []);
                           if (!lidoPor.contains(uid)) {
                             naoLidos++;
                           }
@@ -126,8 +124,7 @@ class HomePage extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
-                              mainAxisAlignment:
-                              MainAxisAlignment.spaceBetween,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 const Text(
                                   "Quadro de Avisos",
@@ -136,8 +133,7 @@ class HomePage extends StatelessWidget {
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                                if (tipoPerfil == 'responsavel' &&
-                                    naoLidos > 0)
+                                if (tipoPerfil == 'responsavel' && naoLidos > 0)
                                   Text(
                                     "🔴 $naoLidos novos",
                                     style: const TextStyle(
@@ -153,43 +149,33 @@ class HomePage extends StatelessWidget {
                               child: ListView.builder(
                                 itemCount: avisos.length,
                                 itemBuilder: (context, index) {
-                                  final aviso = avisos[index].data()
-                                  as Map<String, dynamic>;
-                                  final titulo =
-                                      aviso['titulo'] ?? "Sem título";
+                                  final aviso = avisos[index].data() as Map<String, dynamic>;
+                                  final titulo = aviso['titulo'] ?? "Sem título";
                                   final mensagem = aviso['mensagem'] ?? "";
-                                  final data =
-                                  (aviso['data'] as Timestamp?)?.toDate();
+                                  final data = (aviso['data'] as Timestamp?)?.toDate();
 
                                   bool jaLido = true;
                                   if (tipoPerfil == 'responsavel') {
-                                    final lidoPor = List<String>.from(
-                                        aviso['lidoPor'] ?? []);
+                                    final lidoPor = List<String>.from(aviso['lidoPor'] ?? []);
                                     jaLido = lidoPor.contains(uid);
                                   }
 
                                   return Card(
                                     color: (tipoPerfil == 'responsavel')
-                                        ? (jaLido
-                                        ? Colors.white
-                                        : Colors.amber[100])
+                                        ? (jaLido ? Colors.white : Colors.amber[100])
                                         : Colors.white,
-                                    margin: const EdgeInsets.symmetric(
-                                        vertical: 4),
+                                    margin: const EdgeInsets.symmetric(vertical: 4),
                                     child: ListTile(
                                       title: Text(
                                         titulo,
                                         style: TextStyle(
-                                          fontWeight: (tipoPerfil ==
-                                              'responsavel' &&
-                                              !jaLido)
+                                          fontWeight: (tipoPerfil == 'responsavel' && !jaLido)
                                               ? FontWeight.bold
                                               : FontWeight.normal,
                                         ),
                                       ),
                                       subtitle: Column(
-                                        crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             mensagem,
@@ -218,9 +204,7 @@ class HomePage extends StatelessWidget {
                                 onPressed: () {
                                   Navigator.push(
                                     context,
-                                    MaterialPageRoute(
-                                      builder: (_) => const AvisosPage(),
-                                    ),
+                                    MaterialPageRoute(builder: (_) => const AvisosPage()),
                                   );
                                 },
                                 child: const Text("Ver todos"),
@@ -244,36 +228,27 @@ class HomePage extends StatelessWidget {
                       _menuButton("Alunos", Icons.people, () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(
-                            builder: (_) => const AlunosPage(),
-                          ),
+                          MaterialPageRoute(builder: (_) => const AlunosPage()),
                         );
                       }),
                       _menuButton("Escola", Icons.school, () {}),
                       _menuButton("Turmas", Icons.class_, () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(
-                            builder: (_) => const TurmasPage(),
-                          ),
+                          MaterialPageRoute(builder: (_) => const TurmasPage()),
                         );
                       }),
                       _menuButton("Chat", Icons.chat, () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(
-                            builder: (_) => const MensagensPage(),
-                          ),
+                          MaterialPageRoute(builder: (_) => const MensagensPage()),
                         );
                       }),
                       if (isGestor)
                         _menuButton("Adicionar Aluno", Icons.person_add, () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                              const AddStudentPage(),
-                            ),
+                            MaterialPageRoute(builder: (_) => const AddStudentPage()),
                           );
                         }),
                       if (isGestor)
@@ -283,7 +258,7 @@ class HomePage extends StatelessWidget {
                             MaterialPageRoute(
                               builder: (_) => ResponsaveisPage(
                                 escolaId: escolaId,
-                                gestorUid: uid, // passa UID do gestor logado
+                                gestorUid: uid,
                               ),
                             ),
                           );
@@ -308,9 +283,7 @@ class HomePage extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.grey[300],
           foregroundColor: Colors.black,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
         icon: Icon(icon),
         label: Text(text),

@@ -1,9 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'firebase_options.dart';
-import 'auth_gate.dart';
 import 'pages/splash_page.dart';
+import 'services/notification_service.dart'; // ✅ novo arquivo isolado
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 Future<void> main() async {
@@ -13,6 +14,10 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // ✅ Inicializar serviço de notificações
+  await NotificationService.init();
+
   runApp(const FamiliaEscolaApp());
 }
 
@@ -22,6 +27,8 @@ class FamiliaEscolaApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: NotificationService.navigatorKey,
+      scaffoldMessengerKey: NotificationService.rootScaffoldMessengerKey,
       debugShowCheckedModeBanner: false,
       title: 'Família & Escola',
       theme: ThemeData(
@@ -34,12 +41,10 @@ class FamiliaEscolaApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [
-        Locale('pt', 'BR'), // Define o português do Brasil como o principal
-        Locale('en', 'US'), // Idioma de fallback (reserva)
+        Locale('pt', 'BR'),
+        Locale('en', 'US'),
       ],
       home: const SplashPage(),
-      // home: const AuthGate(),
     );
   }
 }
-

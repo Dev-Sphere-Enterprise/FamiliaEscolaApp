@@ -1,19 +1,18 @@
 plugins {
     id("com.android.application")
-    // START: FlutterFire Configuration
     id("com.google.gms.google-services")
-    // END: FlutterFire Configuration
     id("kotlin-android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
 android {
     namespace = "com.example.a"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = "27.0.12077973"
+    ndkVersion = "27.0.12077973" // Corrected to use Flutter's NDK version
 
     compileOptions {
+        // ✅ Enables desugaring support
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
@@ -23,21 +22,17 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.example.a"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 23
-        targetSdk = 34
+        targetSdk = flutter.targetSdkVersion // Corrected to use Flutter's target SDK version
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Remove this line. Do not use the debug signing key for release builds.
+            // signingConfig = signingConfigs.getByName("debug")
         }
     }
 }
@@ -45,3 +40,11 @@ android {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // ✅ Add desugaring dependency
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
+}
+
+// ❌ This line is redundant. The plugin is already applied at the top.
+// apply(plugin = "com.google.gms.google-services")
