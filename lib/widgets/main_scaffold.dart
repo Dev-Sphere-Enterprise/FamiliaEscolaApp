@@ -57,12 +57,7 @@ class MainScaffold extends StatelessWidget {
       backgroundColor: const Color(0xFFF0F3F7),
       appBar: AppBar(
         title: const Text("Família & Escola"),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => FirebaseAuth.instance.signOut(),
-          )
-        ],
+
       ),
       body: body,
       bottomNavigationBar: BottomNavigationBar(

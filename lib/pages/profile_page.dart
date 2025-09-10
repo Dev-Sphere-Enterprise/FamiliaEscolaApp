@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 
 import '../services/auth_service.dart';
 import '../services/student_service.dart';
@@ -7,6 +8,7 @@ import '../widgets/main_scaffold.dart';
 
 import 'profile_edit_page.dart';
 import 'school_details_page.dart';
+import 'aluno_detalhes_page.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -31,13 +33,36 @@ class ProfilePage extends StatelessWidget {
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+            body: Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00A74F)),
+              ),
+            ),
           );
         }
 
         if (!snapshot.hasData || snapshot.data?.data() == null) {
           return const Scaffold(
-            body: Center(child: Text("Dados do usuário não encontrados")),
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: Color(0xFFA0AEC0),
+                  ),
+                  SizedBox(height: 16),
+                  Text(
+                    "Dados do usuário não encontrados",
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Color(0xFF718096),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           );
         }
 
@@ -48,22 +73,16 @@ class ProfilePage extends StatelessWidget {
         return MainScaffold(
           currentIndex: 4,
           body: SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(20.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _buildProfileHeader(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFF9C84F), Color(0xFFF2A900)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
+                _buildProfileHeader(userData: userData),
                 const SizedBox(height: 24),
                 _buildInfoCard(userData),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
-                // Editar Perfil
+                // Botão Editar Perfil
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
@@ -73,8 +92,22 @@ class ProfilePage extends StatelessWidget {
                         MaterialPageRoute(builder: (_) => const ProfileEditPage()),
                       );
                     },
-                    icon: const Icon(Icons.edit),
-                    label: const Text("Editar Perfil"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF00A74F),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon: const Icon(Icons.edit_outlined, size: 20),
+                    label: const Text(
+                      "Editar Perfil",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ),
 
@@ -90,22 +123,84 @@ class ProfilePage extends StatelessWidget {
                     builder: (context) {
                       final cpf = userData['cpf'];
                       if (cpf == null || cpf.toString().isEmpty) {
-                        return const Center(
-                          child: Text("CPF não encontrado para este usuário."),
+                        return Container(
+                          padding: const EdgeInsets.all(16),
+                          margin: const EdgeInsets.only(top: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.orange.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.warning_amber, color: Colors.orange.shade600),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  "CPF não cadastrado. Entre em contato com a escola.",
+                                  style: TextStyle(
+                                    color: Colors.orange.shade800,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         );
                       }
-                      // CORREÇÃO: O tipo do StreamBuilder foi ajustado para QuerySnapshot<Map<String, dynamic>>
                       return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                         stream: studentService.getStudentsForResponsibleByCpf(schoolId, cpf),
                         builder: (context, studentSnapshot) {
                           if (studentSnapshot.connectionState == ConnectionState.waiting) {
-                            return const Center(child: CircularProgressIndicator());
+                            return const Padding(
+                              padding: EdgeInsets.all(24.0),
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  valueColor: AlwaysStoppedAnimation<Color>(Color(
+                                      0xFF00A74F)),
+                                ),
+                              ),
+                            );
                           }
                           if (!studentSnapshot.hasData || studentSnapshot.data!.docs.isEmpty) {
-                            return const Center(child: Text('Nenhum aluno vinculado.'));
+                            return Container(
+                              padding: const EdgeInsets.all(24),
+                              margin: const EdgeInsets.only(top: 16),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade50,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    Icons.school_outlined,
+                                    size: 48,
+                                    color: Colors.grey.shade400,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  const Text(
+                                    'Nenhum aluno vinculado',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                      color: Color(0xFF718096),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  const Text(
+                                    'Entre em contato com a escola para vincular alunos',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: Color(0xFFA0AEC0),
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
                           }
                           final students = studentSnapshot.data!.docs;
-                          return _buildStudentsList(students);
+                          return _buildStudentsList(students, context);
                         },
                       );
                     },
@@ -119,13 +214,62 @@ class ProfilePage extends StatelessWidget {
   }
 
   Widget _buildManageSchoolCard(BuildContext context, String schoolId) {
-    return Card(
-      elevation: 2,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: ListTile(
-        leading: const Icon(Icons.school, color: Colors.blueAccent),
-        title: const Text('Gerenciar Escola'),
-        subtitle: const Text('Editar ou excluir os dados da sua escola'),
-        trailing: const Icon(Icons.arrow_forward_ios),
+        contentPadding: const EdgeInsets.all(16),
+        leading: Container(
+          width: 50,
+          height: 50,
+          decoration: BoxDecoration(
+            color: const Color(0xFF00A74F).withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            Icons.school,
+            color: const Color(0xFF00A74F),
+            size: 24,
+          ),
+        ),
+        title: const Text(
+          'Gerenciar Escola',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 16,
+            color: Color(0xFF2D3748),
+          ),
+        ),
+        subtitle: const Text(
+          'Editar informações da sua escola',
+          style: TextStyle(
+            color: Color(0xFF718096),
+            fontSize: 14,
+          ),
+        ),
+        trailing: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: const Color(0xFF00A74F).withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            Icons.arrow_forward,
+            size: 20,
+            color: const Color(0xFF00A74F),
+          ),
+        ),
         onTap: () {
           Navigator.push(
             context,
@@ -138,25 +282,123 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildStudentsList(List<QueryDocumentSnapshot<Map<String, dynamic>>> students) {
+  Widget _buildStudentsList(List<QueryDocumentSnapshot<Map<String, dynamic>>> students, BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Alunos Vinculados',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        const Padding(
+          padding: EdgeInsets.only(bottom: 16),
+          child: Text(
+            'Alunos Vinculados',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF2D3748),
+            ),
+          ),
         ),
-        const SizedBox(height: 8),
         ListView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: students.length,
           itemBuilder: (context, index) {
-            final studentData = students[index].data();
-            return Card(
+            final studentDoc = students[index];
+            final studentData = studentDoc.data();
+            final dataNascimento = studentData['dataNascimento'] as Timestamp?;
+            String idade = '';
+
+            if (dataNascimento != null) {
+              final nascimento = dataNascimento.toDate();
+              final hoje = DateTime.now();
+              int anos = hoje.year - nascimento.year;
+              if (hoje.month < nascimento.month ||
+                  (hoje.month == nascimento.month && hoje.day < nascimento.day)) {
+                anos--;
+              }
+              idade = ' • $anos anos';
+            }
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.1),
+                    blurRadius: 6,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
               child: ListTile(
-                title: Text(studentData['nome'] ?? 'Nome não encontrado'),
-                subtitle: Text('Nascimento: ${studentData['dataNascimento'] ?? '...'}'),
+                contentPadding: const EdgeInsets.all(16),
+                leading: Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00A74F).withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      studentData['nome'] != null && studentData['nome'].isNotEmpty
+                          ? studentData['nome'][0].toUpperCase()
+                          : "?",
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF00A74F),
+                      ),
+                    ),
+                  ),
+                ),
+                title: Text(
+                  studentData['nome'] ?? 'Nome não informado',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF2D3748),
+                  ),
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 4),
+                    if (dataNascimento != null)
+                      Text(
+                        'Nascimento: ${DateFormat('dd/MM/yyyy').format(dataNascimento.toDate())}$idade',
+                        style: const TextStyle(
+                          color: Color(0xFF718096),
+                          fontSize: 12,
+                        ),
+                      ),
+                  ],
+                ),
+                trailing: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00A74F).withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    icon: const Icon(
+                      Icons.arrow_forward,
+                      size: 18,
+                      color: Color(0xFF00A74F),
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => AlunoDetalhesPage(
+                            alunoId: studentDoc.id,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
               ),
             );
           },
@@ -165,69 +407,156 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildProfileHeader({required Gradient gradient}) {
+  Widget _buildProfileHeader({required Map<String, dynamic> userData}) {
+    final nome = userData['nome'] ?? 'Usuário';
+    final role = userData['role'] ?? 'responsavel';
+    final isGestor = role == 'gestao';
+
     return Container(
-      height: 200,
-      width: double.infinity,
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: gradient,
+        gradient: const LinearGradient(
+          colors: [Color(0xFF00A74F), Color(0xFF03E572)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.blue.shade300.withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
       ),
-      child: const Icon(Icons.person, size: 120, color: Colors.white),
+      child: Row(
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
+            ),
+            child: Icon(
+              Icons.person,
+              size: 40,
+              color: Colors.white.withOpacity(0.9),
+            ),
+          ),
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  nome,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    isGestor ? 'Gestão Escolar' : 'Responsável',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildInfoCard(Map<String, dynamic> userData) {
-    return Card(
-      color: const Color(0xFFD9D9D9),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      elevation: 0,
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildInfoRow("Nome:", userData['nome'] ?? '...'),
-            const SizedBox(height: 8),
-            _buildInfoRow("CPF:", userData['cpf'] ?? '...'),
-            const SizedBox(height: 8),
-            _buildInfoRow("E-mail:", userData['email'] ?? '...'),
+            const Text(
+              'Informações Pessoais',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF2D3748),
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildInfoRow(Icons.person_outline, "Nome", userData['nome'] ?? 'Não informado'),
+            const SizedBox(height: 12),
+            _buildInfoRow(Icons.credit_card_outlined, "CPF", userData['cpf']?.toString() ?? 'Não informado'),
+            const SizedBox(height: 12),
+            _buildInfoRow(Icons.email_outlined, "E-mail", userData['email'] ?? 'Não informado'),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontWeight: FontWeight.w500,
-              fontSize: 14,
-              color: Colors.black,
-            ),
-          ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.black,
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          icon,
+          size: 20,
+          color: const Color(0xFF00A74F),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF718096),
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-              softWrap: true,
-              overflow: TextOverflow.visible,
-            ),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF2D3748),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

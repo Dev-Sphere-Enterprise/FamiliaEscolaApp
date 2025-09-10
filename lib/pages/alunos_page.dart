@@ -23,153 +23,329 @@ class AlunosPage extends StatelessWidget {
       builder: (context, userSnapshot) {
         if (userSnapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+            body: Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00A74F)),
+              ),
+            ),
           );
         }
 
         if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
           return const Scaffold(
-            body: Center(child: Text("Usuário não encontrado")),
+            body: Center(
+              child: Text("Usuário não encontrado"),
+            ),
           );
         }
 
         final userData = userSnapshot.data!.data() as Map<String, dynamic>;
         final role = userData['role'] ?? 'responsavel';
         final escolaIdUser = userData['escolaId'];
+        final userName = userData['nome'] ?? 'Usuário';
 
-        Stream<QuerySnapshot> alunosStream;
+        if (escolaIdUser == null || escolaIdUser.toString().isEmpty) {
+          return const Scaffold(
+            body: Center(
+              child: Text("Usuário não vinculado a uma escola"),
+            ),
+          );
+        }
 
+        // Query de alunos
+        Query alunosQuery;
         if (role == 'gestao') {
-          alunosStream = FirebaseFirestore.instance
+          alunosQuery = FirebaseFirestore.instance
               .collection('students')
               .where('escolaId', isEqualTo: escolaIdUser)
-              .snapshots();
+              .orderBy('nome');
         } else {
-          final cpfUsuario = userData['cpf'];
-
-          if (cpfUsuario == null || cpfUsuario.toString().isEmpty) {
+          final cpfUsuario = userData['cpf']?.toString();
+          if (cpfUsuario == null || cpfUsuario.isEmpty) {
             return const Scaffold(
-              body: Center(child: Text("CPF do usuário não cadastrado.")),
+              body: Center(
+                child: Text("CPF do usuário não cadastrado"),
+              ),
             );
           }
 
-          alunosStream = FirebaseFirestore.instance
+          alunosQuery = FirebaseFirestore.instance
               .collection('students')
-              .where('responsibleCpf', isEqualTo: cpfUsuario)
               .where('escolaId', isEqualTo: escolaIdUser)
-              .snapshots();
+              .where('responsibleCpf', isEqualTo: cpfUsuario)
+              .orderBy('nome');
         }
 
         return MainScaffold(
           currentIndex: 0,
           body: Scaffold(
-            body: StreamBuilder<QuerySnapshot>(
-              stream: alunosStream,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(
-                    child: Text(
-                      "Nenhum aluno encontrado.",
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            appBar: AppBar(
+              title: const Text(
+                'Alunos',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 20,
+                  color: Colors.white,
+                ),
+              ),
+              backgroundColor: const Color(0xFF00A74F),
+              foregroundColor: Colors.white,
+              elevation: 0,
+            ),
+            body: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header informativo
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border(
+                      bottom: BorderSide(color: Colors.grey.shade200),
                     ),
-                  );
-                }
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF00A74F).withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.people_alt_outlined,
+                          size: 24,
+                          color: Color(0xFF00A74F),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              role == 'gestao' ? 'Todos os Alunos' : 'Meus Alunos',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF2D3748),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              role == 'gestao'
+                                  ? 'Escola ID: $escolaIdUser'
+                                  : 'Alunos vinculados a $userName',
+                              style: const TextStyle(
+                                color: Color(0xFF718096),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
 
-                final alunos = snapshot.data!.docs;
-
-                return ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemCount: alunos.length,
-                  itemBuilder: (context, index) {
-                    final alunoDoc = alunos[index];
-                    final aluno = alunoDoc.data() as Map<String, dynamic>;
-                    final escolaIdAluno = aluno['escolaId'];
-
-                    return StreamBuilder<DocumentSnapshot>(
-                      stream: escolaIdAluno != null
-                          ? FirebaseFirestore.instance.collection('escolas').doc(escolaIdAluno).snapshots()
-                          : const Stream.empty(),
-                      builder: (context, escolaSnapshot) {
-                        String escolaNome = "---";
-                        if (escolaSnapshot.hasData && escolaSnapshot.data!.exists) {
-                          final escolaData = escolaSnapshot.data!.data() as Map<String, dynamic>;
-                          escolaNome = escolaData['nome'] ?? "---";
-                        }
-
-                        return Card(
-                          elevation: 4,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
+                // Lista de alunos
+                Expanded(
+                  child: StreamBuilder<QuerySnapshot>(
+                    stream: alunosQuery.snapshots(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00A74F)),
                           ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
+                        );
+                      }
+
+                      if (snapshot.hasError) {
+                        return const Center(
+                          child: Text(
+                            "Erro ao carregar alunos",
+                            style: TextStyle(color: Colors.red),
+                          ),
+                        );
+                      }
+
+                      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.school_outlined,
+                                size: 64,
+                                color: Colors.grey[300],
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                role == 'gestao'
+                                    ? 'Nenhum aluno cadastrado'
+                                    : 'Nenhum aluno vinculado',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF718096),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                role == 'gestao'
+                                    ? 'ID da Escola: $escolaIdUser'
+                                    : 'Verifique o CPF cadastrado',
+                                style: const TextStyle(
+                                  color: Color(0xFFA0AEC0),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
+                      final alunos = snapshot.data!.docs;
+
+                      return Column(
+                        children: [
+                          // Contador de alunos
+                          Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                            color: Colors.grey.shade50,
                             child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                CircleAvatar(
-                                  radius: 28,
-                                  backgroundColor: Colors.blue.shade100,
-                                  child: Text(
-                                    (aluno['nome'] != null && aluno['nome'].toString().isNotEmpty)
-                                        ? aluno['nome'][0].toUpperCase()
-                                        : "?",
-                                    style: TextStyle(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.blue.shade700,
-                                    ),
+                                Text(
+                                  'Total: ${alunos.length} aluno(s)',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                    color: Color(0xFF00A74F),
                                   ),
                                 ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        aluno['nome'] ?? 'Sem nome',
-                                        style: const TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text("Escola: $escolaNome",
-                                          style: TextStyle(color: Colors.grey.shade700)),
-                                      if (aluno['responsibleName'] != null)
-                                        Text("Responsável: ${aluno['responsibleName']}",
-                                            style: TextStyle(color: Colors.grey.shade700)),
-                                    ],
+                                Text(
+                                  'Escola ID: $escolaIdUser',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF718096),
                                   ),
-                                ),
-                                OutlinedButton.icon(
-                                  style: OutlinedButton.styleFrom(
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                  ),
-                                  icon: const Icon(Icons.arrow_forward),
-                                  label: const Text("Detalhes"),
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => AlunoDetalhesPage(
-                                          alunoId: alunoDoc.id,
-                                        ),
-                                      ),
-                                    );
-                                  },
                                 ),
                               ],
                             ),
                           ),
-                        );
-                      },
-                    );
-                  },
-                );
-              },
+
+                          // Lista
+                          Expanded(
+                            child: ListView.separated(
+                              padding: const EdgeInsets.all(16),
+                              separatorBuilder: (_, __) => const SizedBox(height: 12),
+                              itemCount: alunos.length,
+                              itemBuilder: (context, index) {
+                                final alunoDoc = alunos[index];
+                                final aluno = alunoDoc.data() as Map<String, dynamic>;
+
+                                final alunoNome = aluno['nome'] ?? 'Sem nome';
+                                final responsavelNome = aluno['responsibleName'] ?? 'Não informado';
+                                final escolaIdAluno = aluno['escolaId'] ?? '';
+
+                                return Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(16),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.grey.withOpacity(0.1),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 3),
+                                      ),
+                                    ],
+                                  ),
+                                  child: ListTile(
+                                    contentPadding: const EdgeInsets.all(16),
+                                    leading: Container(
+                                      width: 50,
+                                      height: 50,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF00A74F).withOpacity(0.1),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          alunoNome.isNotEmpty ? alunoNome[0].toUpperCase() : "?",
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFF00A74F),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    title: Text(
+                                      alunoNome,
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF2D3748),
+                                      ),
+                                    ),
+                                    subtitle: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          "Responsável: $responsavelNome",
+                                          style: const TextStyle(
+                                            color: Color(0xFF718096),
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                        Text(
+                                          "Escola ID: $escolaIdAluno",
+                                          style: const TextStyle(
+                                            color: Color(0xFFA0AEC0),
+                                            fontSize: 10,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    trailing: Container(
+                                      width: 40,
+                                      height: 40,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF00A74F).withOpacity(0.1),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: IconButton(
+                                        icon: const Icon(
+                                          Icons.arrow_forward,
+                                          size: 18,
+                                          color: Color(0xFF00A74F),
+                                        ),
+                                        onPressed: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) => AlunoDetalhesPage(
+                                                alunoId: alunoDoc.id,
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
         );

@@ -106,7 +106,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                     child: ElevatedButton.icon(
                       onPressed: _loading ? null : _updateUser,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blueAccent,
+                        backgroundColor: Colors.green,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -142,7 +142,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
       children: [
         CircleAvatar(
           radius: 50,
-          backgroundColor: Colors.blueAccent,
+          backgroundColor: Colors.green,
           child: const Icon(Icons.person, size: 60, color: Colors.white),
         ),
         const SizedBox(height: 12),
