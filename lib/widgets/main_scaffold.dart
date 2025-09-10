@@ -5,6 +5,7 @@ import 'package:FamiliaEscolaApp/pages/home_page.dart';
 import 'package:FamiliaEscolaApp/pages/avisos_page.dart';
 import 'package:FamiliaEscolaApp/pages/mensagens_page.dart';
 import 'package:FamiliaEscolaApp/pages/profile_page.dart';
+import 'package:FamiliaEscolaApp/pages/forumPage.dart'; // ✅ importa a ForumPage
 
 class MainScaffold extends StatelessWidget {
   final Widget body;
@@ -60,6 +61,41 @@ class MainScaffold extends StatelessWidget {
       backgroundColor: const Color(0xFFF0F3F7),
       appBar: AppBar(
         title: const Text("Família & Escola"),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.forum),
+            tooltip: "Fórum",
+            onPressed: () async {
+              if (uid == null) return;
+
+              final userDoc = await FirebaseFirestore.instance
+                  .collection("users")
+                  .doc(uid)
+                  .get();
+              final userData = userDoc.data() ?? {};
+              final escolaId = userData["escolaId"];
+
+              if (escolaId != null && escolaId.toString().isNotEmpty) {
+                if (context.mounted) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ForumPage(escolaId: escolaId),
+                    ),
+                  );
+                }
+              } else {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Você não está vinculado a uma escola."),
+                    ),
+                  );
+                }
+              }
+            },
+          ),
+        ],
       ),
       body: body,
       bottomNavigationBar: uid == null

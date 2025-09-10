@@ -48,7 +48,7 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
   @override
   Widget build(BuildContext context) {
     final topico = widget.topicoData;
-    final uid = FirebaseAuth.instance.currentUser?.uid; // ✅ agora está definido aqui
+    final uid = FirebaseAuth.instance.currentUser?.uid;
 
     return Scaffold(
       appBar: AppBar(
@@ -65,10 +65,7 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
               children: [
                 Text(
                   topico['titulo'] ?? '',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 Text(topico['conteudo'] ?? ''),
@@ -107,6 +104,7 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
                   itemCount: respostas.length,
                   itemBuilder: (context, index) {
                     final data = respostas[index].data() as Map<String, dynamic>;
+
                     return ListTile(
                       leading: const Icon(Icons.person, color: Colors.green),
                       title: Text(data['conteudo'] ?? ''),

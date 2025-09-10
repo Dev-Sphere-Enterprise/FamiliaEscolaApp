@@ -1,4 +1,3 @@
-import 'package:FamiliaEscolaApp/pages/forumThreadPage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -6,23 +5,27 @@ import 'forumThreadPage.dart';
 
 class ForumPage extends StatelessWidget {
   final String escolaId;
-  const ForumPage({super.key, required this.escolaId});
+
+  const ForumPage({
+    super.key,
+    required this.escolaId,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final forumStream = FirebaseFirestore.instance
+        .collection("escolas")
+        .doc(escolaId)
+        .collection("forum")
+        .orderBy("criadoEm", descending: true)
+        .snapshots();
 
     return Scaffold(
       appBar: AppBar(
         title: const Text("Fórum da Escola"),
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection("escolas")
-            .doc(escolaId)
-            .collection("forum")
-            .orderBy("criadoEm", descending: true)
-            .snapshots(),
+        stream: forumStream,
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
@@ -38,8 +41,7 @@ class ForumPage extends StatelessWidget {
               final data = topicos[index].data() as Map<String, dynamic>;
 
               return Card(
-                margin:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 child: ListTile(
                   title: Text(data['titulo'] ?? 'Sem título'),
                   subtitle: Text(
@@ -47,62 +49,7 @@ class ForumPage extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (uid != null)
-                        StreamBuilder<DocumentSnapshot>(
-                          stream: FirebaseFirestore.instance
-                              .collection("users")
-                              .doc(uid)
-                              .snapshots(),
-                          builder: (context, userSnap) {
-                            if (!userSnap.hasData) {
-                              return const SizedBox.shrink();
-                            }
-                            final userData = userSnap.data!.data()
-                            as Map<String, dynamic>? ??
-                                {};
-                            final role = userData['role'] ?? 'responsavel';
-
-                            final podeEditar = (role == 'gestao' ||
-                                data['autorId'] == uid);
-
-                            if (!podeEditar) {
-                              return const SizedBox.shrink();
-                            }
-
-                            return PopupMenuButton<String>(
-                              onSelected: (value) async {
-                                if (value == 'delete') {
-                                  await FirebaseFirestore.instance
-                                      .collection("escolas")
-                                      .doc(escolaId)
-                                      .collection("forum")
-                                      .doc(topicos[index].id)
-                                      .delete();
-                                }
-                              },
-                              itemBuilder: (_) => const [
-                                PopupMenuItem(
-                                  value: 'delete',
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.delete,
-                                          color: Colors.red, size: 18),
-                                      SizedBox(width: 6),
-                                      Text("Deletar",
-                                          style: TextStyle(color: Colors.red)),
-                                    ],
-                                  ),
-                                )
-                              ],
-                            );
-                          },
-                        ),
-                      const Icon(Icons.arrow_forward_ios, size: 16),
-                    ],
-                  ),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                   onTap: () {
                     Navigator.push(
                       context,
@@ -122,16 +69,15 @@ class ForumPage extends StatelessWidget {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _criarTopico(context),
+        onPressed: () => _criarTopico(context, escolaId),
         child: const Icon(Icons.add),
       ),
     );
   }
 
-  void _criarTopico(BuildContext context) {
+  void _criarTopico(BuildContext context, String escolaId) {
     final tituloCtrl = TextEditingController();
     final conteudoCtrl = TextEditingController();
-    final uid = FirebaseAuth.instance.currentUser?.uid;
 
     showDialog(
       context: context,
@@ -142,20 +88,25 @@ class ForumPage extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
-                  controller: tituloCtrl,
-                  decoration: const InputDecoration(labelText: "Título")),
+                controller: tituloCtrl,
+                decoration: const InputDecoration(labelText: "Título"),
+              ),
               TextField(
-                  controller: conteudoCtrl,
-                  decoration: const InputDecoration(labelText: "Mensagem")),
+                controller: conteudoCtrl,
+                decoration: const InputDecoration(labelText: "Mensagem"),
+              ),
             ],
           ),
           actions: [
             TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text("Cancelar")),
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text("Cancelar"),
+            ),
             ElevatedButton(
               onPressed: () async {
+                final uid = FirebaseAuth.instance.currentUser?.uid;
                 if (uid == null) return;
+
                 final userDoc = await FirebaseFirestore.instance
                     .collection("users")
                     .doc(uid)
