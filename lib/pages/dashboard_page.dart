@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -42,10 +43,7 @@ class DashboardPage extends StatelessWidget {
                       color: Colors.white.withOpacity(0.2),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
-                      Icons.analytics,
-                      size: 26,
-                    ),
+                    child: const Icon(Icons.analytics, size: 26),
                   ),
                   const SizedBox(width: 16),
                   const Expanded(
@@ -156,6 +154,20 @@ class DashboardPage extends StatelessWidget {
           );
         }
 
+        /*if (snapshot.hasError) {
+          return Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.red.shade50,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              "Erro: ${snapshot.error}",
+              style: const TextStyle(color: Colors.red),
+            ),
+          );
+        }*/
+
         final data = snapshot.data ?? {};
         return GridView.count(
           crossAxisCount: 2,
@@ -165,11 +177,36 @@ class DashboardPage extends StatelessWidget {
           mainAxisSpacing: 16,
           childAspectRatio: 1.2,
           children: [
-            _buildCard("Alunos", data['Alunos'] ?? 0, Icons.people, const Color(0xFF00A74F)),
-            _buildCard("Turmas", data['Turmas'] ?? 0, Icons.class_, const Color(0xFF4299E1)),
-            _buildCard("Avisos", data['Avisos'] ?? 0, Icons.announcement, const Color(0xFFED8936)),
-            _buildCard("Conversas", data['Conversas'] ?? 0, Icons.chat, const Color(0xFF9F7AEA)),
-            _buildCard("Tópicos", data['Tópicos Fórum'] ?? 0, Icons.forum, const Color(0xFF48BB78)),
+            _buildCard(
+              "Alunos",
+              data['Alunos'] ?? 0,
+              Icons.people,
+              const Color(0xFF00A74F),
+            ),
+            _buildCard(
+              "Turmas",
+              data['Turmas'] ?? 0,
+              Icons.class_,
+              const Color(0xFF4299E1),
+            ),
+            _buildCard(
+              "Avisos",
+              data['Avisos'] ?? 0,
+              Icons.announcement,
+              const Color(0xFFED8936),
+            ),
+            _buildCard(
+              "Conversas",
+              data['Conversas'] ?? 0,
+              Icons.chat,
+              const Color(0xFF9F7AEA),
+            ),
+            _buildCard(
+              "Tópicos",
+              data['Tópicos Fórum'] ?? 0,
+              Icons.forum,
+              const Color(0xFF48BB78),
+            ),
           ],
         );
       },
@@ -178,20 +215,40 @@ class DashboardPage extends StatelessWidget {
 
   Future<Map<String, int>> _fetchCounts() async {
     final db = FirebaseFirestore.instance;
+    final userDoc = await db.collection("users").doc(FirebaseAuth.instance.currentUser!.uid).get();
+    final userData = userDoc.data() ?? {};
+    final role = userData["role"];
+    final escola = userData["escolaId"];
 
-    final alunos = await db.collection('students').where('escolaId', isEqualTo: escolaId).get();
-    final turmas = await db.collection('escolas').doc(escolaId).collection('turmas').get();
-    final avisos = await db.collection('avisos').where('escolaId', isEqualTo: escolaId).get();
-    final conversas = await db.collection('escolas').doc(escolaId).collection('conversas').get();
-    final forum = await db.collection('escolas').doc(escolaId).collection('forum').get();
+    // Se não tiver escola, não retorna nada
+    if (escola == null) return {};
 
-    return {
-      'Alunos': alunos.size,
-      'Turmas': turmas.size,
-      'Avisos': avisos.size,
-      'Conversas': conversas.size,
-      'Tópicos Fórum': forum.size,
-    };
+    final Map<String, int> result = {};
+
+    if (role == "gestao") {
+      final alunos = await db.collection('students').where('escolaId', isEqualTo: escola).get();
+      final turmas = await db.collection('escolas').doc(escola).collection('turmas').get();
+      final avisos = await db.collection('avisos').where('escolaId', isEqualTo: escola).get();
+      final forum = await db.collection('escolas').doc(escola).collection('forum').get();
+
+      // 🔹 Conversas em que o gestor participa
+      final conversas = await db
+          .collection('escolas')
+          .doc(escola)
+          .collection('conversas')
+          .where('participantes', arrayContains: FirebaseAuth.instance.currentUser!.uid)
+          .get();
+
+      result.addAll({
+        'Alunos': alunos.size,
+        'Turmas': turmas.size,
+        'Avisos': avisos.size,
+        'Tópicos Fórum': forum.size,
+        'Conversas': conversas.size, // ✅ só as conversas que ele participa
+      });
+    }
+
+    return result;
   }
 
   Widget _buildCard(String title, int value, IconData icon, Color color) {
@@ -286,7 +343,6 @@ class DashboardPage extends StatelessWidget {
           porTurma[turmaId] = (porTurma[turmaId] ?? 0) + 1;
         }
 
-        // 🔹 Buscar nomes das turmas
         return FutureBuilder<QuerySnapshot>(
           future: FirebaseFirestore.instance
               .collection("escolas")
@@ -301,7 +357,7 @@ class DashboardPage extends StatelessWidget {
             final turmasDocs = turmaSnapshot.data!.docs;
             final Map<String, String> turmaNomes = {
               for (var t in turmasDocs)
-                t.id: (t.data() as Map<String, dynamic>)['nome'] ?? t.id
+                t.id: (t.data() as Map<String, dynamic>)['nome'] ?? t.id,
             };
 
             final colors = [
@@ -321,11 +377,11 @@ class DashboardPage extends StatelessWidget {
 
               return PieChartSectionData(
                 value: entry.value.toDouble(),
-                title: nome,
+                title: "$nome\n(${entry.value})",
                 color: colors[index % colors.length],
                 radius: 60,
                 titleStyle: const TextStyle(
-                  fontSize: 10,
+                  fontSize: 11,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
                 ),
@@ -333,7 +389,7 @@ class DashboardPage extends StatelessWidget {
             }).toList();
 
             return Container(
-              height: 250,
+              height: 260,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -347,10 +403,7 @@ class DashboardPage extends StatelessWidget {
                 ],
               ),
               child: PieChart(
-                PieChartData(
-                  sections: sections,
-                  centerSpaceRadius: 40,
-                ),
+                PieChartData(sections: sections, centerSpaceRadius: 40),
               ),
             );
           },
@@ -411,15 +464,17 @@ class DashboardPage extends StatelessWidget {
               BarChartRodData(
                 toY: entry.value.toDouble(),
                 color: const Color(0xFF00A74F),
-                width: 16,
-                borderRadius: BorderRadius.circular(4),
-              )
+                width: 22,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(6),
+                ),
+              ),
             ],
           );
         }).toList();
 
         return Container(
-          height: 250,
+          height: 260,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: Colors.white,
@@ -434,10 +489,38 @@ class DashboardPage extends StatelessWidget {
           ),
           child: BarChart(
             BarChartData(
-              gridData: FlGridData(show: true),
+              gridData: FlGridData(
+                show: true,
+                drawVerticalLine: false,
+                horizontalInterval: 1,
+                getDrawingHorizontalLine: (value) =>
+                    FlLine(color: Colors.grey.withOpacity(0.2), strokeWidth: 1),
+              ),
               titlesData: FlTitlesData(
                 leftTitles: AxisTitles(
-                  sideTitles: SideTitles(showTitles: true),
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    interval: 1,
+                    reservedSize: 28,
+                    getTitlesWidget: (value, meta) {
+                      if (value % 1 == 0) {
+                        return Text(
+                          value.toInt().toString(),
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Color(0xFF718096),
+                          ),
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    },
+                  ),
+                ),
+                rightTitles: AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                topTitles: AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
                 ),
                 bottomTitles: AxisTitles(
                   sideTitles: SideTitles(
@@ -445,11 +528,18 @@ class DashboardPage extends StatelessWidget {
                     getTitlesWidget: (value, meta) {
                       final index = value.toInt();
                       if (index >= 0 && index < porMes.keys.length) {
+                        final mes = porMes.keys.elementAt(index);
+                        final formatado = DateFormat(
+                          "MMM/yy",
+                        ).format(DateFormat("MM/yyyy").parse(mes));
                         return Padding(
                           padding: const EdgeInsets.only(top: 8.0),
                           child: Text(
-                            porMes.keys.elementAt(index),
-                            style: const TextStyle(fontSize: 10, color: Color(0xFF718096)),
+                            formatado,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         );
                       }
@@ -459,6 +549,9 @@ class DashboardPage extends StatelessWidget {
                 ),
               ),
               barGroups: barGroups,
+              barTouchData: BarTouchData(
+                enabled: false,
+              ), // ✅ sem tooltip/retângulo
             ),
           ),
         );
@@ -517,7 +610,7 @@ class DashboardPage extends StatelessWidget {
         }).toList();
 
         return Container(
-          height: 250,
+          height: 260,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: Colors.white,
@@ -532,7 +625,7 @@ class DashboardPage extends StatelessWidget {
           ),
           child: LineChart(
             LineChartData(
-              gridData: FlGridData(show: true),
+              gridData: FlGridData(show: true, drawVerticalLine: false),
               titlesData: FlTitlesData(
                 bottomTitles: AxisTitles(
                   sideTitles: SideTitles(
@@ -544,7 +637,10 @@ class DashboardPage extends StatelessWidget {
                           padding: const EdgeInsets.only(top: 8.0),
                           child: Text(
                             porDia.keys.elementAt(index),
-                            style: const TextStyle(fontSize: 10, color: Color(0xFF718096)),
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Color(0xFF718096),
+                            ),
                           ),
                         );
                       }
@@ -560,7 +656,10 @@ class DashboardPage extends StatelessWidget {
                   barWidth: 3,
                   color: const Color(0xFF00A74F),
                   dotData: FlDotData(show: true),
-                  belowBarData: BarAreaData(show: true, color: const Color(0xFF00A74F).withOpacity(0.1)),
+                  belowBarData: BarAreaData(
+                    show: true,
+                    color: const Color(0xFF00A74F).withOpacity(0.1),
+                  ),
                 ),
               ],
             ),
