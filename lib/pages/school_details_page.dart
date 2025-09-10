@@ -1,3 +1,4 @@
+import 'package:FamiliaEscolaApp/pages/dashboard_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -69,6 +70,17 @@ class SchoolDetailsPage extends StatelessWidget {
                       );
                     }
                   }
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.dashboard, size: 22),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => DashboardPage(escolaId: schoolId),
+                    ),
+                  );
                 },
               ),
               // Botão de deletar
