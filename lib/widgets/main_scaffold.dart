@@ -57,7 +57,6 @@ class MainScaffold extends StatelessWidget {
       backgroundColor: const Color(0xFFF0F3F7),
       appBar: AppBar(
         title: const Text("Família & Escola"),
-
       ),
       body: body,
       bottomNavigationBar: BottomNavigationBar(

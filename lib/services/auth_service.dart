@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../utils/cpf_utils.dart';
 
 class AuthService {
   final FirebaseAuth _auth;
@@ -29,16 +30,21 @@ class AuthService {
     required String role,
     required String escolaId,
   }) async {
-    final cred = await _auth.createUserWithEmailAndPassword(email: email, password: senha);
+    final cred = await _auth.createUserWithEmailAndPassword(
+      email: email,
+      password: senha,
+    );
+
     await _db.collection('users').doc(cred.user!.uid).set({
       'nome': nome,
       'email': email,
-      'cpf': cpf,
+      'cpf': CpfUtils.normalize(cpf), // ✅ salva só números
       'dataNascimento': dataNascimento,
       'role': role,
       'escolaId': escolaId,
       'createdAt': FieldValue.serverTimestamp(),
     });
+
     return cred;
   }
 
