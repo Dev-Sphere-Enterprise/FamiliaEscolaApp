@@ -205,18 +205,53 @@ class ForumPage extends StatelessWidget {
                               ),
                           ],
                         ),
-                        trailing: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF00A74F).withOpacity(0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.arrow_forward,
-                            size: 18,
-                            color: Color(0xFF00A74F),
-                          ),
+                        trailing: StreamBuilder<DocumentSnapshot>(
+                          stream: FirebaseFirestore.instance
+                              .collection("escolas")
+                              .doc(escolaId)
+                              .collection("forum")
+                              .doc(topicos[index].id)
+                              .snapshots(),
+                          builder: (context, snap) {
+                            if (!snap.hasData) return const SizedBox();
+                            final docData = snap.data!.data() as Map<String, dynamic>? ?? {};
+                            final likes = List<String>.from(docData['likes'] ?? []);
+                            final uid = FirebaseAuth.instance.currentUser?.uid;
+                            final isLiked = uid != null && likes.contains(uid);
+
+                            return Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: Icon(
+                                    isLiked ? Icons.thumb_up : Icons.thumb_up_alt_outlined,
+                                    color: isLiked ? Colors.blue : Colors.grey,
+                                  ),
+                                  onPressed: () async {
+                                    if (uid == null) return;
+                                    final ref = FirebaseFirestore.instance
+                                        .collection("escolas")
+                                        .doc(escolaId)
+                                        .collection("forum")
+                                        .doc(topicos[index].id);
+
+                                    if (isLiked) {
+                                      await ref.update({
+                                        "likes": FieldValue.arrayRemove([uid])
+                                      });
+                                    } else {
+                                      await ref.update({
+                                        "likes": FieldValue.arrayUnion([uid])
+                                      });
+                                    }
+                                  },
+                                ),
+                                Text("${likes.length}"),
+                                const SizedBox(width: 8),
+                                const Icon(Icons.arrow_forward, size: 18, color: Color(0xFF00A74F)),
+                              ],
+                            );
+                          },
                         ),
                         onTap: () {
                           Navigator.push(
@@ -273,67 +308,25 @@ class ForumPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 20),
 
-                // Título
-                const Text(
-                  "Título do Tópico",
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF2D3748),
-                  ),
-                ),
-                const SizedBox(height: 8),
                 TextField(
                   controller: tituloCtrl,
-
                   decoration: InputDecoration(
                     hintText: "Digite o título do tópico",
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFFC0C0C0)),
                     ),
-                    enabledBorder: OutlineInputBorder( // 🔹 borda quando não está focado
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFFC0C0C0), width: 1),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFF00A74F), width: 2),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   ),
                 ),
                 const SizedBox(height: 16),
-
-                // Mensagem
-                const Text(
-                  "Mensagem",
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF2D3748),
-                  ),
-                ),
-                const SizedBox(height: 8),
                 TextField(
                   controller: conteudoCtrl,
+                  maxLines: 4,
                   decoration: InputDecoration(
                     hintText: "Digite sua mensagem",
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFFC0C0C0)),
                     ),
-                    enabledBorder: OutlineInputBorder( // 🔹 borda quando não está focado
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFFC0C0C0), width: 1),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFF00A74F), width: 2),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   ),
-                  maxLines: 4,
                 ),
                 const SizedBox(height: 24),
 
@@ -342,42 +335,14 @@ class ForumPage extends StatelessWidget {
                     Expanded(
                       child: OutlinedButton(
                         onPressed: () => Navigator.pop(ctx),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          side: const BorderSide(color: Color(0xFFE2E8F0)),
-                        ),
-                        child: const Text(
-                          "Cancelar",
-                          style: TextStyle(color: Color(0xFF4A5568)),
-                        ),
+                        child: const Text("Cancelar"),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () async {
-                          if (tituloCtrl.text.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("Digite um título para o tópico"),
-                                backgroundColor: Colors.orange,
-                              ),
-                            );
-                            return;
-                          }
-
-                          if (conteudoCtrl.text.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("Digite uma mensagem para o tópico"),
-                                backgroundColor: Colors.orange,
-                              ),
-                            );
-                            return;
-                          }
+                          if (tituloCtrl.text.isEmpty || conteudoCtrl.text.isEmpty) return;
 
                           final uid = FirebaseAuth.instance.currentUser?.uid;
                           if (uid == null) return;
@@ -398,27 +363,11 @@ class ForumPage extends StatelessWidget {
                             "autorId": uid,
                             "autorNome": userData['nome'] ?? 'Usuário',
                             "criadoEm": FieldValue.serverTimestamp(),
+                            "likes": [], // inicia vazio
                           });
 
-                          if (ctx.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: const Text("Tópico criado com sucesso!"),
-                                backgroundColor: const Color(0xFF00A74F),
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
-                            Navigator.pop(ctx);
-                          }
+                          if (ctx.mounted) Navigator.pop(ctx);
                         },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF00A74F),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
                         child: const Text("Criar Tópico"),
                       ),
                     ),
