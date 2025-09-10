@@ -20,7 +20,7 @@ class MainScaffold extends StatelessWidget {
   });
 
   void _onTap(BuildContext context, int index) {
-    if (index == currentIndex) return;
+    // if (index == currentIndex) return;
 
     switch (index) {
       case 0:
