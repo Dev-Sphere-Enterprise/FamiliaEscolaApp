@@ -20,14 +20,33 @@ class ForumThreadPage extends StatefulWidget {
 
 class _ForumThreadPageState extends State<ForumThreadPage> {
   final _respostaCtrl = TextEditingController();
+  final uid = FirebaseAuth.instance.currentUser?.uid;
+
+  Map<String, dynamic> _userData = {};
+  bool _isLoadingUser = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserData();
+  }
+
+  Future<void> _fetchUserData() async {
+    if (uid == null) {
+      setState(() {
+        _isLoadingUser = false;
+      });
+      return;
+    }
+    final userDoc = await FirebaseFirestore.instance.collection("users").doc(uid).get();
+    setState(() {
+      _userData = userDoc.data() ?? {};
+      _isLoadingUser = false;
+    });
+  }
 
   Future<void> _enviarResposta() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null || _respostaCtrl.text.trim().isEmpty) return;
-
-    final userDoc =
-    await FirebaseFirestore.instance.collection("users").doc(uid).get();
-    final userData = userDoc.data() ?? {};
 
     await FirebaseFirestore.instance
         .collection("escolas")
@@ -38,7 +57,7 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
         .add({
       "conteudo": _respostaCtrl.text.trim(),
       "autorId": uid,
-      "autorNome": userData["nome"] ?? "Usuário",
+      "autorNome": _userData["nome"] ?? "Usuário",
       "criadoEm": FieldValue.serverTimestamp(),
     });
 
@@ -48,7 +67,7 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
   @override
   Widget build(BuildContext context) {
     final topico = widget.topicoData;
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final userRole = _userData['role'] ?? '';
 
     return Scaffold(
       appBar: AppBar(
@@ -77,7 +96,6 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
               ],
             ),
           ),
-
           const Divider(height: 1),
 
           // Lista de respostas
@@ -105,64 +123,43 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
                   itemBuilder: (context, index) {
                     final data = respostas[index].data() as Map<String, dynamic>;
 
+                    // Lógica otimizada para permissões
+                    final podeDeletar = _isLoadingUser
+                        ? false
+                        : (userRole == 'gestao' || data['autorId'] == uid);
+
                     return ListTile(
                       leading: const Icon(Icons.person, color: Colors.green),
                       title: Text(data['conteudo'] ?? ''),
                       subtitle: Text("Por: ${data['autorNome'] ?? 'Usuário'}"),
-                      trailing: (uid == null)
-                          ? null
-                          : StreamBuilder<DocumentSnapshot>(
-                        stream: FirebaseFirestore.instance
-                            .collection("users")
-                            .doc(uid)
-                            .snapshots(),
-                        builder: (context, userSnap) {
-                          if (!userSnap.hasData) {
-                            return const SizedBox.shrink();
+                      trailing: podeDeletar
+                          ? PopupMenuButton<String>(
+                        onSelected: (value) async {
+                          if (value == 'delete') {
+                            await FirebaseFirestore.instance
+                                .collection("escolas")
+                                .doc(widget.escolaId)
+                                .collection("forum")
+                                .doc(widget.topicoId)
+                                .collection("respostas")
+                                .doc(respostas[index].id)
+                                .delete();
                           }
-                          final userData = userSnap.data!.data()
-                          as Map<String, dynamic>? ??
-                              {};
-                          final role = userData['role'] ?? 'responsavel';
-
-                          final podeEditar =
-                          (role == 'gestao' || data['autorId'] == uid);
-
-                          if (!podeEditar) {
-                            return const SizedBox.shrink();
-                          }
-
-                          return PopupMenuButton<String>(
-                            onSelected: (value) async {
-                              if (value == 'delete') {
-                                await FirebaseFirestore.instance
-                                    .collection("escolas")
-                                    .doc(widget.escolaId)
-                                    .collection("forum")
-                                    .doc(widget.topicoId)
-                                    .collection("respostas")
-                                    .doc(respostas[index].id)
-                                    .delete();
-                              }
-                            },
-                            itemBuilder: (_) => const [
-                              PopupMenuItem(
-                                value: 'delete',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.delete,
-                                        color: Colors.red, size: 18),
-                                    SizedBox(width: 6),
-                                    Text("Deletar",
-                                        style:
-                                        TextStyle(color: Colors.red)),
-                                  ],
-                                ),
-                              )
-                            ],
-                          );
                         },
-                      ),
+                        itemBuilder: (_) => const [
+                          PopupMenuItem(
+                            value: 'delete',
+                            child: Row(
+                              children: [
+                                Icon(Icons.delete, color: Colors.red, size: 18),
+                                SizedBox(width: 6),
+                                Text("Deletar", style: TextStyle(color: Colors.red)),
+                              ],
+                            ),
+                          )
+                        ],
+                      )
+                          : null,
                     );
                   },
                 );
