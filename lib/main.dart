@@ -1,17 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'firebase_options.dart';
-import 'auth_gate.dart';
 import 'pages/splash_page.dart';
+import 'services/notification_service.dart'; // ✅ novo arquivo isolado
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
-
-// 🔔 Handler para mensagens em background
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  print("📩 Mensagem recebida em background: ${message.notification?.title} - ${message.data}");
-}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,67 +15,20 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Configura handler para mensagens em segundo plano
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  // ✅ Inicializar serviço de notificações
+  await NotificationService.init();
 
   runApp(const FamiliaEscolaApp());
 }
 
-class FamiliaEscolaApp extends StatefulWidget {
+class FamiliaEscolaApp extends StatelessWidget {
   const FamiliaEscolaApp({super.key});
-
-  @override
-  State<FamiliaEscolaApp> createState() => _FamiliaEscolaAppState();
-}
-
-class _FamiliaEscolaAppState extends State<FamiliaEscolaApp> {
-  @override
-  void initState() {
-    super.initState();
-    _initFCM();
-  }
-
-  Future<void> _initFCM() async {
-    FirebaseMessaging messaging = FirebaseMessaging.instance;
-
-    // 🔑 Solicita permissão (necessário no iOS e Android 13+)
-    NotificationSettings settings = await messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
-
-    print('🔔 Permissão: ${settings.authorizationStatus}');
-
-    // 🔑 Pega token do dispositivo (para enviar notificações específicas)
-    String? token = await messaging.getToken();
-    print("📱 Token FCM: $token");
-
-    // Listener para mensagens em foreground
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      print("📨 Mensagem recebida em FOREGROUND:");
-      print("Título: ${message.notification?.title}");
-      print("Corpo: ${message.notification?.body}");
-      print("Dados: ${message.data}");
-
-      // Exemplo simples de alerta no app
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message.notification?.title ?? "Nova mensagem")),
-        );
-      }
-    });
-
-    // Quando usuário clica na notificação e abre o app
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      print("🚀 App aberto pela notificação: ${message.data}");
-      // Aqui você pode redirecionar para uma tela específica (ex: chat/avisos)
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: NotificationService.navigatorKey,
+      scaffoldMessengerKey: NotificationService.rootScaffoldMessengerKey,
       debugShowCheckedModeBanner: false,
       title: 'Família & Escola',
       theme: ThemeData(
@@ -98,7 +45,6 @@ class _FamiliaEscolaAppState extends State<FamiliaEscolaApp> {
         Locale('en', 'US'),
       ],
       home: const SplashPage(),
-      // home: const AuthGate(),
     );
   }
 }

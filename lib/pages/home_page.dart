@@ -19,48 +19,15 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  @override
-  void initState() {
-    super.initState();
-    _initFCM();
-  }
+  String? _escolaId;
 
-  Future<void> _initFCM() async {
-    final fcm = FirebaseMessaging.instance;
-
-    // Solicita permissão (iOS)
-    await fcm.requestPermission();
-
-    // Obtém o token para debug
-    final token = await fcm.getToken();
-    print("🔥 Token FCM: $token");
-
-    // Listener para foreground
-    FirebaseMessaging.onMessage.listen((msg) {
-      final notification = msg.notification;
-      if (notification != null && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(notification.title ?? "Nova notificação")),
-        );
-      }
-    });
-
-    // Listener para clique em notificação
-    FirebaseMessaging.onMessageOpenedApp.listen((msg) {
-      final data = msg.data;
-      if (data.containsKey("screen")) {
-        if (data["screen"] == "avisos") {
-          Navigator.push(context, MaterialPageRoute(builder: (_) => const AvisosPage()));
-        } else if (data["screen"] == "chat" && data["conversaId"] != null) {
-          Navigator.push(context, MaterialPageRoute(
-            builder: (_) => MensagensThreadPage(
-              escolaId: data["escolaId"],
-              conversaId: data["conversaId"],
-            ),
-          ));
-        }
-      }
-    });
+  // Helper: inscreve no tópico da escola (chamado a cada build, mas só executa se mudar)
+  void _subscribeToSchoolTopic(String escolaId) {
+    if (_escolaId != escolaId) {
+      _escolaId = escolaId;
+      FirebaseMessaging.instance.subscribeToTopic("escola_$escolaId");
+      print("📱 Inscrito no tópico: escola_$escolaId");
+    }
   }
 
   @override
@@ -95,8 +62,8 @@ class _HomePageState extends State<HomePage> {
           return const Scaffold(body: Center(child: Text("Usuário não vinculado a uma escola")));
         }
 
-        // 🔔 Inscreve nos tópicos da escola
-        FirebaseMessaging.instance.subscribeToTopic("escola_$escolaId");
+        // 🔔 Inscreve nos tópicos da escola (apenas 1 vez por usuário)
+        _subscribeToSchoolTopic(escolaId);
 
         return MainScaffold(
           currentIndex: 2,
@@ -105,7 +72,8 @@ class _HomePageState extends State<HomePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("Olá, $nomeUsuario!",
+                Text(
+                  "Olá, $nomeUsuario!",
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 20,
@@ -119,21 +87,17 @@ class _HomePageState extends State<HomePage> {
                   child: StreamBuilder<QuerySnapshot>(
                     stream: FirebaseFirestore.instance
                         .collection('avisos')
-                        .where('escolaId', isEqualTo: escolaId) // 🔎 só da escola
+                        .where('escolaId', isEqualTo: escolaId)
                         .orderBy('data', descending: true)
                         .limit(4)
                         .snapshots(),
                     builder: (context, avisoSnapshot) {
-                      if (avisoSnapshot.connectionState ==
-                          ConnectionState.waiting) {
-                        return const Center(
-                            child: CircularProgressIndicator());
+                      if (avisoSnapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
                       }
 
-                      if (!avisoSnapshot.hasData ||
-                          avisoSnapshot.data!.docs.isEmpty) {
-                        return const Center(
-                            child: Text("Nenhum aviso disponível"));
+                      if (!avisoSnapshot.hasData || avisoSnapshot.data!.docs.isEmpty) {
+                        return const Center(child: Text("Nenhum aviso disponível"));
                       }
 
                       final avisos = avisoSnapshot.data!.docs;
@@ -143,8 +107,7 @@ class _HomePageState extends State<HomePage> {
                       if (tipoPerfil == 'responsavel') {
                         for (var aviso in avisos) {
                           final data = aviso.data() as Map<String, dynamic>;
-                          final lidoPor =
-                          List<String>.from(data['lidoPor'] ?? []);
+                          final lidoPor = List<String>.from(data['lidoPor'] ?? []);
                           if (!lidoPor.contains(uid)) {
                             naoLidos++;
                           }
@@ -161,8 +124,7 @@ class _HomePageState extends State<HomePage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
-                              mainAxisAlignment:
-                              MainAxisAlignment.spaceBetween,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 const Text(
                                   "Quadro de Avisos",
@@ -171,8 +133,7 @@ class _HomePageState extends State<HomePage> {
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                                if (tipoPerfil == 'responsavel' &&
-                                    naoLidos > 0)
+                                if (tipoPerfil == 'responsavel' && naoLidos > 0)
                                   Text(
                                     "🔴 $naoLidos novos",
                                     style: const TextStyle(
@@ -188,43 +149,33 @@ class _HomePageState extends State<HomePage> {
                               child: ListView.builder(
                                 itemCount: avisos.length,
                                 itemBuilder: (context, index) {
-                                  final aviso = avisos[index].data()
-                                  as Map<String, dynamic>;
-                                  final titulo =
-                                      aviso['titulo'] ?? "Sem título";
+                                  final aviso = avisos[index].data() as Map<String, dynamic>;
+                                  final titulo = aviso['titulo'] ?? "Sem título";
                                   final mensagem = aviso['mensagem'] ?? "";
-                                  final data =
-                                  (aviso['data'] as Timestamp?)?.toDate();
+                                  final data = (aviso['data'] as Timestamp?)?.toDate();
 
                                   bool jaLido = true;
                                   if (tipoPerfil == 'responsavel') {
-                                    final lidoPor = List<String>.from(
-                                        aviso['lidoPor'] ?? []);
+                                    final lidoPor = List<String>.from(aviso['lidoPor'] ?? []);
                                     jaLido = lidoPor.contains(uid);
                                   }
 
                                   return Card(
                                     color: (tipoPerfil == 'responsavel')
-                                        ? (jaLido
-                                        ? Colors.white
-                                        : Colors.amber[100])
+                                        ? (jaLido ? Colors.white : Colors.amber[100])
                                         : Colors.white,
-                                    margin: const EdgeInsets.symmetric(
-                                        vertical: 4),
+                                    margin: const EdgeInsets.symmetric(vertical: 4),
                                     child: ListTile(
                                       title: Text(
                                         titulo,
                                         style: TextStyle(
-                                          fontWeight: (tipoPerfil ==
-                                              'responsavel' &&
-                                              !jaLido)
+                                          fontWeight: (tipoPerfil == 'responsavel' && !jaLido)
                                               ? FontWeight.bold
                                               : FontWeight.normal,
                                         ),
                                       ),
                                       subtitle: Column(
-                                        crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             mensagem,
@@ -253,9 +204,7 @@ class _HomePageState extends State<HomePage> {
                                 onPressed: () {
                                   Navigator.push(
                                     context,
-                                    MaterialPageRoute(
-                                      builder: (_) => const AvisosPage(),
-                                    ),
+                                    MaterialPageRoute(builder: (_) => const AvisosPage()),
                                   );
                                 },
                                 child: const Text("Ver todos"),
@@ -279,36 +228,27 @@ class _HomePageState extends State<HomePage> {
                       _menuButton("Alunos", Icons.people, () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(
-                            builder: (_) => const AlunosPage(),
-                          ),
+                          MaterialPageRoute(builder: (_) => const AlunosPage()),
                         );
                       }),
                       _menuButton("Escola", Icons.school, () {}),
                       _menuButton("Turmas", Icons.class_, () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(
-                            builder: (_) => const TurmasPage(),
-                          ),
+                          MaterialPageRoute(builder: (_) => const TurmasPage()),
                         );
                       }),
                       _menuButton("Chat", Icons.chat, () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(
-                            builder: (_) => const MensagensPage(),
-                          ),
+                          MaterialPageRoute(builder: (_) => const MensagensPage()),
                         );
                       }),
                       if (isGestor)
                         _menuButton("Adicionar Aluno", Icons.person_add, () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                              const AddStudentPage(),
-                            ),
+                            MaterialPageRoute(builder: (_) => const AddStudentPage()),
                           );
                         }),
                       if (isGestor)
@@ -318,7 +258,7 @@ class _HomePageState extends State<HomePage> {
                             MaterialPageRoute(
                               builder: (_) => ResponsaveisPage(
                                 escolaId: escolaId,
-                                gestorUid: uid, // passa UID do gestor logado
+                                gestorUid: uid,
                               ),
                             ),
                           );
